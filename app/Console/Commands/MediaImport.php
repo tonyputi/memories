@@ -2,14 +2,15 @@
 
 namespace App\Console\Commands;
 
+use App\Models\Disk;
 use App\Models\Medium;
 use App\Models\User;
 use Illuminate\Console\Command;
 use Illuminate\Contracts\Console\PromptsForMissingInput;
 use Illuminate\Support\Facades\Storage;
 use ZipArchive;
+
 use function Laravel\Prompts\search;
-use function Laravel\Prompts\select;
 
 class MediaImport extends Command implements PromptsForMissingInput
 {
@@ -18,7 +19,7 @@ class MediaImport extends Command implements PromptsForMissingInput
      *
      * @var string
      */
-    protected $signature = 'app:media-import {user} {file} {--d|disk=local}';
+    protected $signature = 'app:media-import {user} {disk} {file}';
 
     /**
      * The console command description.
@@ -35,21 +36,24 @@ class MediaImport extends Command implements PromptsForMissingInput
     protected function promptForMissingArgumentsUsing(): array
     {
         return [
-            'user' => fn() => search(
+            'user' => fn () => search(
                 label: 'Which user should receive the imported media?',
                 placeholder: 'Search for a user...',
-                options: fn ($v) => strlen($v) > 0 
-                    ? User::where('name', 'like', "%{$v}%")->pluck('name', 'id')->all() 
+                options: fn ($v) => strlen($v) > 0
+                    ? User::where('name', 'like', "%{$v}%")->pluck('name', 'id')->all()
                     : [],
             ),
-            'disk' => fn() => select(
+            'disk' => fn () => search(
                 label: 'Which disk should the media be imported to?',
-                options: array_keys(config('filesystems.disks')),
+                placeholder: 'Search for a disk...',
+                options: fn ($v) => strlen($v) > 0
+                    ? Disk::where('name', 'like', "%{$v}%")->pluck('name', 'id')->all()
+                    : [],
             ),
-            'file' => fn() => search(
+            'file' => fn () => search(
                 label: 'Which file should be imported?',
                 placeholder: 'Search for a file...',
-                options: fn ($v) => strlen($v) > 0 
+                options: fn ($v) => strlen($v) > 0
                     ? Storage::disk('uploads')->files()
                     : [],
                 transform: fn ($v) => Storage::disk('uploads')->path($v),
@@ -63,36 +67,38 @@ class MediaImport extends Command implements PromptsForMissingInput
     public function handle()
     {
         $user = User::find($this->argument('user'));
-        $disk = $this->option('disk');
+        $disk = Disk::find($this->argument('disk'));
         $file = $this->argument('file');
 
-        $storage = Storage::disk($disk);
+        $storage = Storage::build($disk->config);
 
-        if (!file_exists($file)) {
+        if (! file_exists($file)) {
             $this->error('File does not exist...');
+
             return;
         }
-    
+
         if (mime_content_type($file) !== 'application/zip') {
             $this->error('File is not a zip file...');
+
             return;
         }
 
         $name = basename($file);
-    
+
         $this->info("Importing media from {$name}...");
 
-        // $this->extractZip($user->getKey(), $disk, $file);
+        $this->extractZip($storage, $file);
 
         [$metas, $files] = collect($storage->allFiles())
             ->partition(fn ($file) => str_ends_with($file, '.json'));
 
-        $i = 0;
-        foreach ($files as $file) {
-            $this->info("Importing media from {$file}...");
+        $this->info("Importing {$files->count()} files...");
 
+        $bar = $this->output->createProgressBar($files->count());
+
+        foreach ($files as $file) {
             if ($meta = $metas->first(fn ($meta) => $meta === "{$file}.json")) {
-                $this->info("Importing meta from {$meta}...");
                 $meta = json_decode($storage->get($meta), true);
                 if (json_last_error() !== JSON_ERROR_NONE) {
                     $this->error('Meta is not a valid JSON file...');
@@ -102,7 +108,7 @@ class MediaImport extends Command implements PromptsForMissingInput
 
             Medium::updateOrCreate([
                 'user_id' => $user->getKey(),
-                'disk' => $disk,
+                'disk_id' => $disk->getKey(),
                 'name' => basename($file),
                 'path' => $file,
                 'hash' => hash_file('sha256', $storage->path($file)),
@@ -113,20 +119,20 @@ class MediaImport extends Command implements PromptsForMissingInput
                 'created_at' => $storage->lastModified($file),
                 'updated_at' => $storage->lastModified($file),
             ]);
-        
-            $i++;
+
+            $bar->advance();
         }
 
-        // dd($i, count($metas), count($media), count($files));
-    
-        $this->info('Syncing media...');
+        $bar->finish();
+
+        $this->info('Media imported successfully!');
     }
 
-    protected function extractZip($user_id, $disk, $file)
+    protected function extractZip($storage, $file)
     {
-        $zip = new ZipArchive();
+        $zip = new ZipArchive;
         $zip->open($file);
-        $zip->extractTo($disk->path($user_id));
+        $zip->extractTo($storage->path('/'));
         $zip->close();
     }
 }

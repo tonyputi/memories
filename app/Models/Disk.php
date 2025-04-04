@@ -2,17 +2,14 @@
 
 namespace App\Models;
 
-use App\Models\Concerns\BelongsToDisk;
 use App\Models\Concerns\BelongsToUser;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class Medium extends Model
+class Disk extends Model
 {
-    use BelongsToDisk, BelongsToUser, HasFactory, SoftDeletes;
-
-    protected $guarded = [];
+    use BelongsToUser, HasFactory, SoftDeletes;
 
     /**
      * Get the attributes that should be cast.
@@ -22,7 +19,7 @@ class Medium extends Model
     protected function casts(): array
     {
         return [
-            'meta' => 'collection',
+            'config' => 'json',
         ];
     }
 }

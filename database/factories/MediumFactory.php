@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Models\Disk;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -18,7 +19,7 @@ class MediumFactory extends Factory
     public function definition(): array
     {
         return [
-            'disk' => $this->faker->randomElement(['local', 'public', 's3']),
+            'disk_id' => Disk::factory(),
             'path' => $this->faker->word,
             'name' => $this->faker->word,
             'type' => $this->faker->mimeType,

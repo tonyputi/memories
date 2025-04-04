@@ -11,21 +11,15 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('media', function (Blueprint $table) {
+        Schema::create('disks', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
-            $table->foreignId('disk_id')->constrained('disks')->cascadeOnDelete();
             $table->string('name');
-            $table->string('path');
-            $table->string('type');
-            $table->string('hash');
-            $table->unsignedBigInteger('size');
-            $table->json('meta');
+            $table->json('config');
             $table->timestamps();
             $table->softDeletes();
 
-            $table->unique(['user_id', 'disk_id', 'name', 'path', 'hash']);
-            $table->index(['user_id', 'disk_id', 'name', 'deleted_at']);
+            $table->unique(['user_id', 'name']);
         });
     }
 
@@ -34,6 +28,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('media');
+        Schema::dropIfExists('disks');
     }
 };
