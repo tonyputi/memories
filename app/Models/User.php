@@ -45,4 +45,12 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
+    /**
+     * Get the media for the user.
+     */
+    public function media(): HasMany
+    {
+        return $this->hasMany(Medium::class);
+    }
 }
