@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\DiskDriver;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -20,7 +21,7 @@ class DiskFactory extends Factory
         return [
             'user_id' => User::factory(),
             'name' => $this->faker->word,
-            'driver' => 'local',
+            'driver' => DiskDriver::Local->value,
             'config' => function (array $attributes) {
                 return [
                     'root' => storage_path("app/public/{$attributes['user_id']}"),

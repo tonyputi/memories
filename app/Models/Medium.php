@@ -8,13 +8,22 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Support\Facades\Storage;
 
 class Medium extends Model
 {
     use BelongsToDisk, BelongsToUser, HasFactory, SoftDeletes;
 
-    protected $guarded = [];
+    public static function booted(): void
+    {
+        static::saving(function (Medium $medium) {
+            $storage = $medium->disk->storage();
+            if ($storage->exists($medium->path)) {
+                $medium->type = $storage->mimeType($medium->path);
+                $medium->hash = hash_file('sha256', $storage->path($medium->path));
+                $medium->size = $storage->size($medium->path);
+            }
+        });
+    }
 
     /**
      * Get the attributes that should be cast.
@@ -31,7 +40,7 @@ class Medium extends Model
     public function url(): Attribute
     {
         return Attribute::make(
-            get: fn ($value) => Storage::build(array_merge($this->disk->config, ['driver' => $this->disk->driver]))->url($this->path),
+            get: fn ($value) => $this->disk->storage()->url($this->path),
         );
     }
 }

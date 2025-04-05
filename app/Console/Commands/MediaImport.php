@@ -7,7 +7,9 @@ use App\Models\Medium;
 use App\Models\User;
 use Illuminate\Console\Command;
 use Illuminate\Contracts\Console\PromptsForMissingInput;
+use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use ZipArchive;
 
 use function Laravel\Prompts\search;
@@ -70,7 +72,7 @@ class MediaImport extends Command implements PromptsForMissingInput
         $disk = Disk::find($this->argument('disk'));
         $file = $this->argument('file');
 
-        $storage = Storage::build($disk->config);
+        $storage = $disk->storage();
 
         if (! file_exists($file)) {
             $this->error('File does not exist...');
@@ -88,9 +90,9 @@ class MediaImport extends Command implements PromptsForMissingInput
 
         $this->info("Importing media from {$name}...");
 
-        $this->extractZip($storage, $file);
+        $tempStorage = $this->extractZip($user, $file);
 
-        [$metas, $files] = collect($storage->allFiles())
+        [$metas, $files] = collect($tempStorage->allFiles())
             ->partition(fn ($file) => str_ends_with($file, '.json'));
 
         $this->info("Importing {$files->count()} files...");
@@ -99,25 +101,37 @@ class MediaImport extends Command implements PromptsForMissingInput
 
         foreach ($files as $file) {
             if ($meta = $metas->first(fn ($meta) => $meta === "{$file}.json")) {
-                $meta = json_decode($storage->get($meta), true);
+                $meta = json_decode($tempStorage->get($meta), true);
                 if (json_last_error() !== JSON_ERROR_NONE) {
                     $this->error('Meta is not a valid JSON file...');
                     $meta = [];
                 }
             }
 
+            $name = basename($file);
+
+            $extension = pathinfo($file, PATHINFO_EXTENSION);
+            $uuid = Str::lower(Str::random(32).'.'.$extension);
+            $hash = hash_file('sha256', $tempStorage->path($file));
+            $createdAt = $tempStorage->lastModified($file);
+            $updatedAt = $tempStorage->lastModified($file);
+
+            if (! copy($tempStorage->path($file), $storage->path($uuid))) {
+                $this->error("Failed to copy file {$file} to {$uuid}...");
+
+                continue;
+            }
+
             Medium::updateOrCreate([
                 'user_id' => $user->getKey(),
                 'disk_id' => $disk->getKey(),
-                'name' => basename($file),
-                'path' => $file,
-                'hash' => hash_file('sha256', $storage->path($file)),
+                'name' => $name,
+                'path' => $uuid,
+                'hash' => $hash,
             ], [
-                'size' => $storage->size($file),
-                'type' => $storage->mimeType($file),
                 'meta' => $meta ?? [],
-                'created_at' => $storage->lastModified($file),
-                'updated_at' => $storage->lastModified($file),
+                'created_at' => $createdAt,
+                'updated_at' => $updatedAt,
             ]);
 
             $bar->advance();
@@ -125,14 +139,24 @@ class MediaImport extends Command implements PromptsForMissingInput
 
         $bar->finish();
 
+        if ($tempStorage->deleteDirectory($user->getKey())) {
+            $this->info('Temporary storage deleted successfully!');
+        } else {
+            $this->error('Failed to delete temporary storage...');
+        }
+
         $this->info('Media imported successfully!');
     }
 
-    protected function extractZip($storage, $file)
+    protected function extractZip($user, $file): Filesystem
     {
+        $storage = Storage::disk('uploads');
+
         $zip = new ZipArchive;
         $zip->open($file);
-        $zip->extractTo($storage->path('/'));
+        $zip->extractTo($storage->path($user->getKey()));
         $zip->close();
+
+        return $storage;
     }
 }

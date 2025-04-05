@@ -5,6 +5,7 @@ namespace Database\Factories;
 use App\Models\Disk;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Http\UploadedFile;
 
 /**
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Medium>
@@ -19,14 +20,17 @@ class MediumFactory extends Factory
     public function definition(): array
     {
         return [
-            'disk_id' => Disk::factory(),
-            'path' => $this->faker->word,
-            'name' => $this->faker->word,
-            'type' => $this->faker->mimeType,
-            'hash' => $this->faker->md5,
-            'size' => $this->faker->numberBetween(100, 1000000),
-            'meta' => [],
             'user_id' => User::factory(),
+            'disk_id' => Disk::factory(),
+            'name' => "{$this->faker->word}.jpg",
+            'path' => function (array $attributes) {
+                $storage = Disk::find($attributes['disk_id'])->storage();
+                $file = UploadedFile::fake()->image($attributes['name']);
+                $storage->putFile('/', $file);
+
+                return $file->hashName();
+            },
+            'meta' => [],
         ];
     }
 }
