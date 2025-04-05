@@ -21,7 +21,7 @@ class Disk extends Model
             $disk->storage()->deleteDirectory('/');
         });
     }
-    
+
     /**
      * Get the attributes that should be cast.
      *
