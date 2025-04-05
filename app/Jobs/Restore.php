@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use ZipArchive;
 
-class ProcessUploadedArchive implements ShouldQueue
+class Restore implements ShouldQueue
 {
     use Queueable;
 

@@ -2,7 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Jobs\ProcessUploadedArchive;
+use App\Jobs\Restore;
 use App\Models\Disk;
 use Illuminate\Console\Command;
 use Illuminate\Contracts\Console\PromptsForMissingInput;
@@ -10,21 +10,21 @@ use Illuminate\Support\Facades\Storage;
 
 use function Laravel\Prompts\search;
 
-class MediaImport extends Command implements PromptsForMissingInput
+class MediaRestore extends Command implements PromptsForMissingInput
 {
     /**
      * The name and signature of the console command.
      *
      * @var string
      */
-    protected $signature = 'app:media-import {disk} {file}';
+    protected $signature = 'media:restore {disk} {file}';
 
     /**
      * The console command description.
      *
      * @var string
      */
-    protected $description = 'Import media from a file';
+    protected $description = 'Restore media from an archive file';
 
     /**
      * Prompt for missing input arguments using the returned questions.
@@ -47,6 +47,20 @@ class MediaImport extends Command implements PromptsForMissingInput
                 options: fn ($v) => strlen($v) > 0
                     ? Storage::disk('uploads')->allFiles()
                     : [],
+                validate: function ($v) {
+                    $validMimeTypes = ['application/zip', 'application/x-zip-compressed'];
+                    $storage = Storage::disk('uploads');
+
+                    if (! $storage->exists($v)) {
+                        return 'File does not exist';
+                    }
+
+                    if (! in_array($storage->mimeType($v), $validMimeTypes)) {
+                        return 'File is not a valid archive file';
+                    }
+
+                    return null;
+                },
             ),
         ];
     }
@@ -56,6 +70,6 @@ class MediaImport extends Command implements PromptsForMissingInput
      */
     public function handle()
     {
-        ProcessUploadedArchive::dispatchSync($this->argument('file'), $this->argument('disk'));
+        Restore::dispatchSync($this->argument('file'), $this->argument('disk'));
     }
 }
