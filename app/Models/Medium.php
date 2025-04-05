@@ -23,6 +23,10 @@ class Medium extends Model
                 $medium->size = $storage->size($medium->path);
             }
         });
+
+        static::forceDeleted(function (Medium $medium) {
+            $medium->disk->storage()->delete($medium->path);
+        });
     }
 
     /**

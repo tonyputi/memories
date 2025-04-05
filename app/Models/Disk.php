@@ -14,6 +14,13 @@ use Illuminate\Support\Facades\Storage;
 class Disk extends Model
 {
     use BelongsToUser, HasFactory, HasUuids, SoftDeletes;
+
+    public static function booted(): void
+    {
+        static::forceDeleted(function (Disk $disk) {
+            $disk->storage()->deleteDirectory('/');
+        });
+    }
     
     /**
      * Get the attributes that should be cast.
