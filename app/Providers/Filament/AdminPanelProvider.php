@@ -60,6 +60,7 @@ class AdminPanelProvider extends PanelProvider
             ->spa()
             ->unsavedChangesAlerts()
             ->profile()
+            ->registration()
             ->passwordReset()
             ->emailVerification()
             ->databaseTransactions()

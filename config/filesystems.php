@@ -62,7 +62,7 @@ return [
 
         'uploads' => [
             'driver' => 'local',
-            'root' => storage_path('app/uploads'),
+            'root' => storage_path('framework/uploads'),
             'serve' => true,
             'throw' => false,
             'report' => false,

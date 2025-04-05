@@ -20,11 +20,11 @@ class DiskFactory extends Factory
         return [
             'user_id' => User::factory(),
             'name' => $this->faker->word,
+            'driver' => 'local',
             'config' => function (array $attributes) {
                 return [
-                    'driver' => 'local',
                     'root' => storage_path("app/public/{$attributes['user_id']}"),
-                    'url' => env('APP_URL').'/storage',
+                    'url' => sprintf('%s/storage/%s', config('app.url'), $attributes['user_id']),
                     'visibility' => 'public',
                     'throw' => false,
                     'report' => false,

@@ -15,11 +15,12 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
             $table->string('name');
+            $table->string('driver');
             $table->json('config');
             $table->timestamps();
             $table->softDeletes();
 
-            $table->unique(['user_id', 'name']);
+            $table->unique(['user_id', 'name', 'driver']);
         });
     }
 
