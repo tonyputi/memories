@@ -2,7 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Jobs\Restore;
+use App\Jobs\RestoreMedia;
 use App\Models\Disk;
 use Illuminate\Console\Command;
 use Illuminate\Contracts\Console\PromptsForMissingInput;
@@ -70,6 +70,6 @@ class MediaRestore extends Command implements PromptsForMissingInput
      */
     public function handle()
     {
-        Restore::dispatchSync($this->argument('file'), $this->argument('disk'));
+        RestoreMedia::dispatch($this->argument('file'), $this->argument('disk'));
     }
 }

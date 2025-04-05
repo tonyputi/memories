@@ -35,11 +35,19 @@ class Disk extends Model
         ];
     }
 
+    public function storageConfig(): array
+    {
+        return array_merge(
+            $this->config,
+            ['driver' => $this->driver->value]
+        );
+    }
+
     /**
      * Get the storage instance for the disk.
      */
     public function storage(): Filesystem
     {
-        return Storage::build(array_merge($this->config, ['driver' => $this->driver->value]));
+        return Storage::disk($this->getKey());
     }
 }

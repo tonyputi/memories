@@ -56,7 +56,7 @@ class RestoreMedium implements ShouldQueue
         $hash = md5_file($uploads->path($this->path));
         $createdAt = $uploads->lastModified($this->path);
         $updatedAt = $uploads->lastModified($this->path);
-        $path = Str::lower("/{$hash}.{$extension}");
+        $path = Str::lower("{$hash}.{$extension}");
 
         if (! copy($uploads->path($this->path), $disk->storage()->path($path))) {
             Log::error("Failed to copy file {$this->path} to {$path}...");

@@ -2,11 +2,13 @@
 
 namespace App\Providers;
 
+use App\Models\Disk;
 use Filament\Actions;
 use Filament\Forms;
 use Filament\Infolists;
 use Filament\Tables;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Config;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -48,6 +50,10 @@ class AppServiceProvider extends ServiceProvider
 
         Infolists\Components\Entry::configureUsing(modifyUsing: function ($entry): void {
             $entry->translateLabel();
+        });
+
+        Disk::each(function (Disk $disk) {
+            Config::set("filesystems.disks.{$disk->getKey()}", $disk->storageConfig());
         });
     }
 }
