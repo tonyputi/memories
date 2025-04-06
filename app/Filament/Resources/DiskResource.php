@@ -15,6 +15,7 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class DiskResource extends Resource
@@ -91,14 +92,34 @@ class DiskResource extends Resource
                 Tables\Actions\Action::make('import')
                     ->icon('heroicon-o-arrow-up-tray')
                     ->form([
-                        Forms\Components\FileUpload::make('path')
-                            ->disk('uploads')
-                            ->directory(Str::uuid7())
-                            ->previewable(false)
-                            ->required(),
+                        Forms\Components\Tabs::make('source')
+                            ->statePath('activeTab')
+                            ->tabs([
+                                Forms\Components\Tabs\Tab::make('Computer')
+                                    ->statePath('computer')
+                                    ->schema([
+                                        Forms\Components\FileUpload::make('path')
+                                            ->label('File')
+                                            ->disk('uploads')
+                                            ->directory(Str::uuid7())
+                                            ->previewable(false)
+                                            ->required(fn (Get $get): bool => $get('activeTab') === 'computer'),
+                                    ]),
+                                Forms\Components\Tabs\Tab::make('Uploads')
+                                    ->statePath('uploads')
+                                    ->schema([
+                                        Forms\Components\Select::make('path')
+                                            ->label('Archive')
+                                            ->options(collect(Storage::disk('uploads')->allFiles())->mapWithKeys(fn ($file) => [$file => $file]))
+                                            ->searchable()
+                                            ->required(fn (Get $get): bool => $get('activeTab') === 'uploads'),
+                                    ]),
+                            ]),
                     ])
-                    ->action(function (array $data, Disk $record) {
-                        Jobs\RestoreMedia::dispatch($data['path'], $record->getKey());
+                    ->action(function (array $data, Disk $disk) {
+                        $tabData = data_get($data, 'activeTab', []);
+                        $file = $tabData['computer']['path'] ?? $tabData['uploads']['path'];
+                        Jobs\RestoreMedia::dispatch($file, $disk->getKey());
                     }),
 
                 Tables\Actions\EditAction::make(),

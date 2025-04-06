@@ -52,7 +52,6 @@ class RestoreImage extends RestoreMedium
         }
 
         Medium::updateOrCreate([
-            'user_id' => $disk->user_id,
             'disk_id' => $disk->getKey(),
             'name' => $name,
             'hash' => $hash,

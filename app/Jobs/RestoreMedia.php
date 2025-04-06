@@ -37,13 +37,13 @@ class RestoreMedia implements ShouldQueue
             $disk_id = $this->disk_id;
 
             if ($storage->mimeType($this->path) !== 'application/zip') {
-                Log::error('Invalid archive...');
+                Log::error("Invalid archive {$this->path}...");
 
                 return;
             }
 
             if (! $this->extractZip($storage, $this->path)) {
-                Log::error('Failed to extract archive...');
+                Log::error("Failed to extract archive {$this->path}...");
 
                 return;
             }
