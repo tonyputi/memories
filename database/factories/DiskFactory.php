@@ -15,20 +15,20 @@ class DiskFactory extends Factory
     /**
      * Configure the model factory.
      */
-    public function configure(): static
-    {
-        return $this->afterCreating(function (Disk $disk) {
-            $disk->config = [
-                'root' => storage_path("app/public/{$disk->getKey()}"),
-                'url' => sprintf('%s/storage/%s', config('app.url'), $disk->getKey()),
-                'visibility' => 'public',
-                'throw' => false,
-                'report' => false,
-            ];
+    // public function configure(): static
+    // {
+    //     return $this->afterCreating(function (Disk $disk) {
+    //         $disk->config = [
+    //             'root' => config('filesystems.disks.public.root'),
+    //             'url' => config('filesystems.disks.public.url'),
+    //             'visibility' => 'public',
+    //             'throw' => false,
+    //             'report' => false,
+    //         ];
 
-            $disk->save();
-        });
-    }
+    //         $disk->save();
+    //     });
+    // }
 
     /**
      * Define the model's default state.
@@ -41,7 +41,13 @@ class DiskFactory extends Factory
             'user_id' => User::factory(),
             'name' => $this->faker->word,
             'driver' => DiskDriver::Local->value,
-            'config' => [],
+            'config' => [
+                'root' => config('filesystems.disks.public.root'),
+                'url' => config('filesystems.disks.public.url'),
+                'visibility' => 'public',
+                'throw' => false,
+                'report' => false,
+            ],
         ];
     }
 }

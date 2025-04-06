@@ -7,6 +7,7 @@ use Illuminate\Bus\Batch;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -21,7 +22,7 @@ class RestoreMedia implements ShouldQueue
     /**
      * Create a new job instance.
      */
-    public function __construct(public string $path, public string $disk_id)
+    public function __construct(public string $path, public string $disk_id, public bool $delete_after_restore = true)
     {
         //
     }
@@ -33,6 +34,7 @@ class RestoreMedia implements ShouldQueue
     {
         try {
             $storage = Storage::disk('uploads');
+            $disk_id = $this->disk_id;
 
             if ($storage->mimeType($this->path) !== 'application/zip') {
                 Log::error('Invalid archive...');
@@ -46,19 +48,19 @@ class RestoreMedia implements ShouldQueue
                 return;
             }
 
-            if (! $storage->delete($this->path)) {
-                Log::error('Failed to delete temporary storage...');
+            if ($this->delete_after_restore && ! $storage->delete($this->path)) {
+                Log::error("Failed to delete {$this->path} archive...");
 
                 return;
             }
 
-            // TODO: files non deve contenere file inderiderati come .gitignore o .DS_Store etc
-            [$meta, $files] = collect($storage->allFiles())
-                ->partition(fn ($file) => Str::endsWith($file, '.json'));
-
-            $jobs = $files->map(fn ($file) => new RestoreMedium($file, $this->disk_id));
+            $jobs = $this->availableFiles($storage, $disk_id)
+                ->map(fn ($file) => new RestoreMedium($file, $disk_id));
 
             Bus::batch($jobs)
+                ->name('Restore Media Batch')
+                ->allowFailures()
+                ->onConnection('database')
                 ->before(function (Batch $batch) {
                     Log::info('Batch created...');
                 })->progress(function (Batch $batch) {
@@ -67,15 +69,16 @@ class RestoreMedia implements ShouldQueue
                     Log::info('Batch completed...');
                 })->catch(function (Batch $batch, Throwable $e) {
                     Log::error('Batch failed...');
-                })->finally(function (Batch $batch) {
+                })->finally(function (Batch $batch) use ($disk_id) {
                     $storage = Storage::disk('uploads');
-                    if (! $storage->deleteDirectory(dirname($this->path))) {
+                    if (! $storage->deleteDirectory($disk_id)) {
                         Log::error('Failed to delete temporary storage...');
                     }
-                })->dispatch();
+                })
+                ->dispatch();
         } catch (Exception $e) {
             Log::error('Failed to process uploaded archive...', ['error' => $e->getMessage()]);
-            if (! $storage->deleteDirectory(dirname($this->path))) {
+            if (! $storage->deleteDirectory($disk_id)) {
                 Log::error('Failed to delete temporary storage...');
             }
         }
@@ -85,9 +88,19 @@ class RestoreMedia implements ShouldQueue
     {
         $zip = new ZipArchive;
         $zip->open($storage->path($path));
-        $zip->extractTo($storage->path(dirname($path)));
+        // We create the same directory as the disk
+        $zip->extractTo($storage->path($this->disk_id));
         $zip->close();
 
         return true;
+    }
+
+    protected function availableFiles(Filesystem $storage, string $disk_id): Collection
+    {
+        // TODO: files non deve contenere file inderiderati come .gitignore o .DS_Store etc
+        [$meta, $files] = collect($storage->allFiles($disk_id))
+            ->partition(fn ($file) => Str::endsWith($file, '.json'));
+
+        return $files;
     }
 }

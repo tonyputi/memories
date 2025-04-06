@@ -6,7 +6,9 @@ use App\Jobs\RestoreMedia;
 use App\Models\Disk;
 use Illuminate\Console\Command;
 use Illuminate\Contracts\Console\PromptsForMissingInput;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 use function Laravel\Prompts\search;
 
@@ -17,7 +19,7 @@ class MediaRestore extends Command implements PromptsForMissingInput
      *
      * @var string
      */
-    protected $signature = 'media:restore {disk} {file}';
+    protected $signature = 'media:restore {file} {disk} {--d|delete}';
 
     /**
      * The console command description.
@@ -34,33 +36,15 @@ class MediaRestore extends Command implements PromptsForMissingInput
     protected function promptForMissingArgumentsUsing(): array
     {
         return [
-            'disk' => fn () => search(
-                label: 'Which disk should the media be imported to?',
-                placeholder: 'Search for a disk...',
-                options: fn ($v) => strlen($v) > 0
-                    ? Disk::where('name', 'like', "%{$v}%")->pluck('name', 'id')->all()
-                    : [],
-            ),
             'file' => fn () => search(
                 label: 'Which file should be imported?',
                 placeholder: 'Search for a file...',
-                options: fn ($v) => strlen($v) > 0
-                    ? Storage::disk('uploads')->allFiles()
-                    : [],
-                validate: function ($v) {
-                    $validMimeTypes = ['application/zip', 'application/x-zip-compressed'];
-                    $storage = Storage::disk('uploads');
-
-                    if (! $storage->exists($v)) {
-                        return 'File does not exist';
-                    }
-
-                    if (! in_array($storage->mimeType($v), $validMimeTypes)) {
-                        return 'File is not a valid archive file';
-                    }
-
-                    return null;
-                },
+                options: fn ($v) => $this->availableArchives($v)->all(),
+            ),
+            'disk' => fn () => search(
+                label: 'Which disk should the media be imported to?',
+                placeholder: 'Search for a disk...',
+                options: fn ($v) => $this->availableDisks($v)->all(),
             ),
         ];
     }
@@ -70,6 +54,34 @@ class MediaRestore extends Command implements PromptsForMissingInput
      */
     public function handle()
     {
-        RestoreMedia::dispatch($this->argument('file'), $this->argument('disk'));
+        $file = $this->argument('file');
+        $disk = $this->argument('disk');
+        $delete = $this->option('delete') ?? false;
+
+        RestoreMedia::dispatchSync($file, $disk, $delete);
+    }
+
+    /**
+     * Get the available archives.
+     */
+    public function availableArchives(string $value): Collection
+    {
+        $storage = Storage::disk('uploads');
+        $allowedFormats = ['application/zip'];
+
+        return collect($storage->allFiles())
+            ->reject(fn ($file) => !in_array($storage->mimeType($file), $allowedFormats))
+            ->filter(fn ($file) => str_starts_with($file, $value))
+            ->values();
+    }
+
+    /**
+     * Get the available disks.
+     */
+    public function availableDisks(string $value): Collection
+    {
+        return Disk::query()
+            ->where('name', 'like', '%' . $value . '%')
+            ->pluck('name', 'id');
     }
 }
