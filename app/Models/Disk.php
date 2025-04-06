@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Storage;
+
 class Disk extends Model
 {
     use BelongsToUser, HasFactory, HasUuids, SoftDeletes;
@@ -63,6 +64,7 @@ class Disk extends Model
     public function storage(): Filesystem
     {
         Config::set("filesystems.disks.{$this->getKey()}", $this->storageConfig());
+
         return Storage::disk($this->getKey());
     }
 }

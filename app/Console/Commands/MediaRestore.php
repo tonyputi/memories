@@ -8,7 +8,6 @@ use Illuminate\Console\Command;
 use Illuminate\Contracts\Console\PromptsForMissingInput;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 
 use function Laravel\Prompts\search;
 
@@ -70,7 +69,7 @@ class MediaRestore extends Command implements PromptsForMissingInput
         $allowedFormats = ['application/zip'];
 
         return collect($storage->allFiles())
-            ->reject(fn ($file) => !in_array($storage->mimeType($file), $allowedFormats))
+            ->reject(fn ($file) => ! in_array($storage->mimeType($file), $allowedFormats))
             ->filter(fn ($file) => str_starts_with($file, $value))
             ->values();
     }
@@ -81,7 +80,7 @@ class MediaRestore extends Command implements PromptsForMissingInput
     public function availableDisks(string $value): Collection
     {
         return Disk::query()
-            ->where('name', 'like', '%' . $value . '%')
+            ->where('name', 'like', '%'.$value.'%')
             ->pluck('name', 'id');
     }
 }
