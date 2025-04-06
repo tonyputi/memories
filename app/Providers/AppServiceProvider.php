@@ -51,7 +51,5 @@ class AppServiceProvider extends ServiceProvider
         Infolists\Components\Entry::configureUsing(modifyUsing: function ($entry): void {
             $entry->translateLabel();
         });
-
-        Disk::register();
     }
 }

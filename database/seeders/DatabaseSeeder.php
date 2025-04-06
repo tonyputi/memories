@@ -25,7 +25,6 @@ class DatabaseSeeder extends Seeder
         ]);
 
         Medium::factory(10)->create([
-            'user_id' => $user->getKey(),
             'disk_id' => $disk->getKey(),
         ]);
     }

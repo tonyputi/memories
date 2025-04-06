@@ -20,17 +20,21 @@ class MediumFactory extends Factory
     public function definition(): array
     {
         return [
-            'user_id' => User::factory(),
             'disk_id' => Disk::factory(),
             'name' => "{$this->faker->word}.jpg",
             'path' => function (array $attributes) {
-                $storage = Disk::find($attributes['disk_id'])->storage();
                 $file = UploadedFile::fake()->image($attributes['name']);
-                $storage->putFile('/', $file);
+                Disk::find($attributes['disk_id'])->storage()->putFile('/', $file);
 
                 return $file->hashName();
             },
-            'meta' => [],
+            'meta' => [
+                'gps' => [
+                    'altitude' => $this->faker->numberBetween(0, 1000),
+                    'latitude' => $this->faker->latitude,
+                    'longitude' => $this->faker->longitude,
+                ],
+            ],
         ];
     }
 }

@@ -26,9 +26,6 @@ class MediumResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\Select::make('user_id')
-                    ->relationship('user', 'name')
-                    ->required(),
                 Forms\Components\Select::make('disk_id')
                     ->relationship('disk', 'name')
                     ->required()
@@ -58,8 +55,6 @@ class MediumResource extends Resource
                 Tables\Columns\ImageColumn::make('url')
                     ->label('Thumbnail')
                     ->circular(),
-                Tables\Columns\TextColumn::make('user.name')
-                    ->sortable(),
                 Tables\Columns\TextColumn::make('disk.name')
                     ->badge()
                     ->sortable(),

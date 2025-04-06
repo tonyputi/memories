@@ -3,15 +3,15 @@
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToDisk;
-use App\Models\Concerns\BelongsToUser;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasOneThrough;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Medium extends Model
 {
-    use BelongsToDisk, BelongsToUser, HasFactory, SoftDeletes;
+    use BelongsToDisk, HasFactory, SoftDeletes;
 
     public static function booted(): void
     {
@@ -39,6 +39,11 @@ class Medium extends Model
         return [
             'meta' => 'collection',
         ];
+    }
+
+    public function user(): HasOneThrough
+    {
+        return $this->hasOneThrough(User::class, Disk::class);
     }
 
     public function url(): Attribute

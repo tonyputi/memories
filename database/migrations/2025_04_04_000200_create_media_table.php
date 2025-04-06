@@ -13,7 +13,6 @@ return new class extends Migration
     {
         Schema::create('media', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
             $table->foreignUuid('disk_id')->constrained('disks')->cascadeOnDelete();
             $table->string('name');
             $table->string('path');
