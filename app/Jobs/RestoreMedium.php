@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Models\Disk;
 use App\Models\Medium;
+use Carbon\Carbon;
 use Illuminate\Bus\Batchable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -48,15 +49,16 @@ class RestoreMedium implements ShouldQueue
 
         if ($uploads->exists("{$this->path}.json")) {
             $meta = json_decode($uploads->get("{$this->path}.json"), true);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                $meta = [];
+            }
         }
 
-        $name = basename($this->path);
-
-        $extension = pathinfo($this->path, PATHINFO_EXTENSION);
-        $hash = md5_file($uploads->path($this->path));
-        $createdAt = $uploads->lastModified($this->path);
-        $updatedAt = $uploads->lastModified($this->path);
-        $path = Str::lower("{$hash}.{$extension}");
+        $name = data_get($meta, 'title', basename($this->path));
+        $createdAt = $this->getCreatedAt($meta, $uploads->lastModified($this->path));
+        $updatedAt = $this->getUpdatedAt($meta, $uploads->lastModified($this->path));
+        $hash = $this->getHash($uploads->path($this->path));
+        $path = Str::lower(sprintf('%s.%s', $hash, pathinfo($this->path, PATHINFO_EXTENSION)));
 
         if (! copy($uploads->path($this->path), $disk->storage()->path($path))) {
             Log::error("Failed to copy file {$this->path} to {$path}...");
@@ -75,5 +77,20 @@ class RestoreMedium implements ShouldQueue
             'created_at' => $createdAt,
             'updated_at' => $updatedAt,
         ]);
+    }
+
+    public function getCreatedAt(array $meta, $default): Carbon
+    {
+        return Carbon::createFromTimestamp(data_get($meta, 'photoTakenTime.timestamp', data_get($meta, 'creationTime.timestamp', $default)));
+    }
+
+    public function getUpdatedAt(array $meta, $default): Carbon
+    {
+        return Carbon::createFromTimestamp(data_get($meta, 'photoTakenTime.timestamp', data_get($meta, 'creationTime.timestamp', $default)));
+    }
+
+    public function getHash(string $path): string
+    {
+        return md5_file($path);
     }
 }

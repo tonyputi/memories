@@ -20,7 +20,7 @@ return new class extends Migration
             $table->string('type');
             $table->string('hash');
             $table->unsignedBigInteger('size');
-            $table->json('meta');
+            $table->json('meta')->nullable();
             $table->timestamps();
             $table->softDeletes();
 
