@@ -86,13 +86,74 @@ class RestoreMedia implements ShouldQueue
 
     protected function extractZip(Filesystem $storage, string $path): bool
     {
-        $zip = new ZipArchive;
-        $zip->open($storage->path($path));
-        // We create the same directory as the disk
-        $zip->extractTo($storage->path($this->disk_id));
-        $zip->close();
+        try {
+            $zip = new ZipArchive;
+            if ($zip->open($storage->path($path)) !== true) {
+                Log::error("Failed to open ZIP file");
+                return false;
+            }
 
-        return true;
+            $extractPath = $storage->path($this->disk_id);
+            
+            // Assicuriamoci che la directory base esista
+            if (!file_exists($extractPath)) {
+                mkdir($extractPath, 0755, true);
+            }
+
+            // Estrai file per file
+            for ($i = 0; $i < $zip->numFiles; $i++) {
+                $stat = $zip->statIndex($i);
+                $filename = $stat['name'];
+
+                // Salta le directory
+                if (substr($filename, -1) === '/') {
+                    continue;
+                }
+
+                // Crea le directory necessarie
+                $dirname = dirname($filename);
+                if ($dirname !== '.') {
+                    $fullDirPath = $extractPath . '/' . $dirname;
+                    if (!file_exists($fullDirPath)) {
+                        mkdir($fullDirPath, 0755, true);
+                    }
+                }
+
+                // Estrai il file usando getStream per gestire meglio la memoria
+                $stream = $zip->getStream($filename);
+                if ($stream) {
+                    $targetPath = $extractPath . '/' . $filename;
+                    $targetHandle = fopen($targetPath, 'wb');
+                    
+                    if ($targetHandle) {
+                        // Leggi e scrivi in chunks di 1MB
+                        while (!feof($stream)) {
+                            $chunk = fread($stream, 1024 * 1024);
+                            fwrite($targetHandle, $chunk);
+                            
+                            // Libera la memoria dopo ogni chunk
+                            unset($chunk);
+                            if (function_exists('gc_collect_cycles')) {
+                                gc_collect_cycles();
+                            }
+                        }
+                        
+                        fclose($targetHandle);
+                    }
+                    
+                    fclose($stream);
+                }
+            }
+
+            $zip->close();
+            return true;
+        } catch (Exception $e) {
+            Log::error("ZIP extraction failed: " . $e->getMessage());
+            if (isset($zip)) {
+                $zip->close();
+            }
+            return false;
+        }
     }
 
     protected function availableFiles(Filesystem $storage, string $disk_id): Collection
