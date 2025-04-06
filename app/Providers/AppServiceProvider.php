@@ -52,11 +52,6 @@ class AppServiceProvider extends ServiceProvider
             $entry->translateLabel();
         });
 
-        // TODO: Can we add this to the boot method of the Disk model?
-        rescue(function () {
-            Disk::each(function (Disk $disk) {
-                Config::set("filesystems.disks.{$disk->getKey()}", $disk->storageConfig());
-            });
-        });
+        Disk::register();
     }
 }

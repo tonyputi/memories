@@ -9,8 +9,8 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Storage;
-
 class Disk extends Model
 {
     use BelongsToUser, HasFactory, HasUuids, SoftDeletes;
@@ -35,12 +35,26 @@ class Disk extends Model
         ];
     }
 
+    /**
+     * Get the storage config for the disk.
+     */
     public function storageConfig(): array
     {
-        return array_merge(
-            $this->config,
-            ['driver' => $this->driver->value]
-        );
+        $config = $this->config;
+
+        if ($this->driver === DiskDriver::Local) {
+            $config['driver'] = $this->driver->value;
+            $config['root'] = implode(DIRECTORY_SEPARATOR, [
+                rtrim(data_get($config, 'root', config('filesystems.disks.local.root')), DIRECTORY_SEPARATOR),
+                $this->getKey(),
+            ]);
+            $config['url'] = implode('/', [
+                rtrim(data_get($config, 'url', config('filesystems.disks.local.url')), '/'),
+                $this->getKey(),
+            ]);
+        }
+
+        return $config;
     }
 
     /**
@@ -49,5 +63,18 @@ class Disk extends Model
     public function storage(): Filesystem
     {
         return Storage::disk($this->getKey());
+    }
+
+    /**
+     * Register the disks.
+     */
+    public static function register(): void
+    {
+        // TODO: Can we add this to the boot method of the Disk model?
+        rescue(function () {
+            Disk::each(function (Disk $disk) {
+                Config::set("filesystems.disks.{$disk->getKey()}", $disk->storageConfig());
+            });
+        });
     }
 }
