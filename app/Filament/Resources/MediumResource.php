@@ -20,7 +20,7 @@ class MediumResource extends Resource
 {
     protected static ?string $model = Medium::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-photo';
+    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
     public static function form(Form $form): Form
     {
