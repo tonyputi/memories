@@ -110,7 +110,13 @@ class DiskResource extends Resource
                                     ->schema([
                                         Forms\Components\Select::make('path')
                                             ->label('Archive')
-                                            ->options(collect(Storage::disk('uploads')->allFiles())->mapWithKeys(fn ($file) => [$file => $file]))
+                                            ->options(function () {
+                                                $storage = Storage::disk('uploads');
+
+                                                return collect($storage->allFiles())
+                                                    ->filter(fn ($file) => $storage->mimeType($file) === 'application/zip')
+                                                    ->mapWithKeys(fn ($file) => [$file => $file]);
+                                            })
                                             ->searchable()
                                             ->required(fn (Get $get): bool => $get('activeTab') === 'uploads'),
                                     ]),

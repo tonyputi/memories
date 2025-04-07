@@ -140,17 +140,17 @@ class RestoreMedia implements ShouldQueue
                 $storage->makeDirectory($this->disk_id);
             }
 
-            // Estrai file per file
+            // Extract files one by one
             for ($i = 0; $i < $zip->numFiles; $i++) {
                 $stat = $zip->statIndex($i);
                 $filename = $stat['name'];
 
-                // Salta le directory
+                // Skip directories
                 if (substr($filename, -1) === '/') {
                     continue;
                 }
 
-                // Crea le directory necessarie
+                // Create necessary directories
                 $dirname = dirname($filename);
                 if ($dirname !== '.') {
                     $fullDirPath = "{$this->disk_id}/{$dirname}";
@@ -159,19 +159,19 @@ class RestoreMedia implements ShouldQueue
                     }
                 }
 
-                // Estrai il file usando getStream per gestire meglio la memoria
+                // Extract the file using getStream to handle memory better
                 $stream = $zip->getStream($filename);
                 if ($stream) {
                     $targetPath = "{$this->disk_id}/{$filename}";
                     $targetHandle = fopen($storage->path($targetPath), 'wb');
 
                     if ($targetHandle) {
-                        // Leggi e scrivi in chunks di 1MB
+                        // Read and write in chunks of 1MB
                         while (! feof($stream)) {
                             $chunk = fread($stream, 1024 * 1024);
                             fwrite($targetHandle, $chunk);
 
-                            // Libera la memoria dopo ogni chunk
+                            // Free memory after each chunk
                             unset($chunk);
                             if (function_exists('gc_collect_cycles')) {
                                 gc_collect_cycles();
@@ -201,7 +201,8 @@ class RestoreMedia implements ShouldQueue
     protected function availableFiles(Filesystem $storage, string $disk_id): Collection
     {
         // TODO: files non deve contenere file inderiderati come .gitignore o .DS_Store etc
-        [$meta, $files] = collect($storage->allFiles($disk_id))
+        [$json, $files] = collect($storage->allFiles($disk_id))
+            ->reject(fn ($file) => Str::startsWith($file, '.'))
             ->partition(fn ($file) => Str::endsWith($file, '.json'));
 
         return $files;

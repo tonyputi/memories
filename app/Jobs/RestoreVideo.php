@@ -47,8 +47,8 @@ class RestoreVideo extends RestoreMedium
             'path' => $path,
         ], [
             'meta' => $meta,
-            'created_at' => Carbon::createFromTimestamp(data_get($meta, 'taken_at', $uploads->lastModified($this->path))),
-            'updated_at' => Carbon::createFromTimestamp(data_get($meta, 'taken_at', $uploads->lastModified($this->path))),
+            'created_at' => Carbon::createFromTimestamp(data_get($meta, 'taken_at') ?? $uploads->lastModified($this->path)),
+            'updated_at' => Carbon::createFromTimestamp(data_get($meta, 'taken_at') ?? $uploads->lastModified($this->path)),
         ]);
     }
 }
