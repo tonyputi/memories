@@ -23,8 +23,8 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
 
-            $table->unique(['user_id', 'disk_id', 'name', 'path', 'hash']);
-            $table->index(['user_id', 'disk_id', 'name', 'deleted_at']);
+            $table->unique(['disk_id', 'name', 'path', 'type', 'hash']);
+            $table->index(['disk_id', 'name', 'type', 'deleted_at']);
         });
     }
 
