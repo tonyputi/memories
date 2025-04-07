@@ -2,7 +2,10 @@
 
 namespace App\Jobs;
 
+use App\Models\Disk;
 use Exception;
+use Filament\Notifications\Actions\Action;
+use Filament\Notifications\Notification;
 use Illuminate\Bus\Batch;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -24,7 +27,7 @@ class RestoreMedia implements ShouldQueue
      *
      * @var int
      */
-    public $timeout = 300;
+    public $timeout = 1800;
 
     /**
      * Create a new job instance.
@@ -39,24 +42,29 @@ class RestoreMedia implements ShouldQueue
      */
     public function handle(): void
     {
-        try {
-            $storage = Storage::disk('uploads');
-            $disk_id = $this->disk_id;
+        $notification = Notification::make();
+        $storage = Storage::disk('uploads');
+        $disk_id = $this->disk_id;
+        $disk = Disk::find($disk_id);
 
+        try {
             if ($storage->mimeType($this->path) !== 'application/zip') {
                 Log::error("Invalid archive {$this->path}...");
+                $notification->title('Invalid archive...')->error()->sendToDatabase($disk->user);
 
                 return;
             }
 
             if (! $this->extractZip($storage, $this->path)) {
                 Log::error("Failed to extract archive {$this->path}...");
+                $notification->title('Failed to extract archive...')->error()->sendToDatabase($disk->user);
 
                 return;
             }
 
             if ($this->delete_after_restore && ! $storage->delete($this->path)) {
                 Log::error("Failed to delete {$this->path} archive...");
+                $notification->title('Failed to delete archive...')->error()->sendToDatabase($disk->user);
 
                 return;
             }
@@ -68,14 +76,35 @@ class RestoreMedia implements ShouldQueue
                 ->name('Restore Media Batch')
                 ->allowFailures()
                 ->onConnection('database')
-                ->before(function (Batch $batch) {
-                    Log::info('Batch created...');
+                ->before(function (Batch $batch) use ($disk) {
+                    Notification::make()
+                        ->title('Restore started...')
+                        ->success()
+                        ->sendToDatabase($disk->user);
                 })->progress(function (Batch $batch) {
-                    Log::info('Batch progress...');
-                })->then(function (Batch $batch) {
-                    Log::info('Batch completed...');
-                })->catch(function (Batch $batch, Throwable $e) {
-                    Log::error('Batch failed...');
+                    Log::info("Batch {$batch->progress()} progress...");
+                })->then(function (Batch $batch) use ($disk) {
+                    $body = __(':count of :total media restored successfully...', [
+                        'count' => $batch->successfulJobsCount,
+                        'total' => $batch->totalJobs,
+                    ]);
+                    Notification::make()
+                        ->title('Restore completed...')
+                        ->body($body)
+                        ->actions([
+                            Action::make('view')
+                                ->button()
+                                ->url(route('filament.admin.resources.media.index')),
+                        ])
+                        ->success()
+                        ->sendToDatabase($disk->user);
+                })->catch(function (Batch $batch, Throwable $e) use ($disk) {
+                    Notification::make()
+                        ->title('Restore failed...')
+                        ->body($e->getMessage())
+                        ->error()
+                        ->sendToDatabase($disk->user);
+                    Log::error('Restore failed...');
                 })->finally(function (Batch $batch) use ($disk_id) {
                     $storage = Storage::disk('uploads');
                     if (! $storage->deleteDirectory($disk_id)) {
@@ -85,6 +114,7 @@ class RestoreMedia implements ShouldQueue
                 ->dispatch();
         } catch (Exception $e) {
             Log::error('Failed to process uploaded archive...', ['error' => $e->getMessage()]);
+            $notification->title('Failed to process uploaded archive...')->error()->sendToDatabase($disk->user);
             if (! $storage->deleteDirectory($disk_id)) {
                 Log::error('Failed to delete temporary storage...');
             }
@@ -96,15 +126,13 @@ class RestoreMedia implements ShouldQueue
         try {
             $zip = new ZipArchive;
             if ($zip->open($storage->path($path)) !== true) {
-                Log::error("Failed to open ZIP file");
+                Log::error('Failed to open ZIP file');
+
                 return false;
             }
 
-            $extractPath = $storage->path($this->disk_id);
-            
-            // Assicuriamoci che la directory base esista
-            if (!file_exists($extractPath)) {
-                mkdir($extractPath, 0755, true);
+            if (! $storage->exists($this->disk_id)) {
+                $storage->makeDirectory($this->disk_id);
             }
 
             // Estrai file per file
@@ -120,45 +148,47 @@ class RestoreMedia implements ShouldQueue
                 // Crea le directory necessarie
                 $dirname = dirname($filename);
                 if ($dirname !== '.') {
-                    $fullDirPath = $extractPath . '/' . $dirname;
-                    if (!file_exists($fullDirPath)) {
-                        mkdir($fullDirPath, 0755, true);
+                    $fullDirPath = "{$this->disk_id}/{$dirname}";
+                    if (! $storage->exists($fullDirPath)) {
+                        $storage->makeDirectory($fullDirPath);
                     }
                 }
 
                 // Estrai il file usando getStream per gestire meglio la memoria
                 $stream = $zip->getStream($filename);
                 if ($stream) {
-                    $targetPath = $extractPath . '/' . $filename;
-                    $targetHandle = fopen($targetPath, 'wb');
-                    
+                    $targetPath = "{$this->disk_id}/{$filename}";
+                    $targetHandle = fopen($storage->path($targetPath), 'wb');
+
                     if ($targetHandle) {
                         // Leggi e scrivi in chunks di 1MB
-                        while (!feof($stream)) {
+                        while (! feof($stream)) {
                             $chunk = fread($stream, 1024 * 1024);
                             fwrite($targetHandle, $chunk);
-                            
+
                             // Libera la memoria dopo ogni chunk
                             unset($chunk);
                             if (function_exists('gc_collect_cycles')) {
                                 gc_collect_cycles();
                             }
                         }
-                        
+
                         fclose($targetHandle);
                     }
-                    
+
                     fclose($stream);
                 }
             }
 
             $zip->close();
+
             return true;
         } catch (Exception $e) {
-            Log::error("ZIP extraction failed: " . $e->getMessage());
+            Log::error('ZIP extraction failed: '.$e->getMessage());
             if (isset($zip)) {
                 $zip->close();
             }
+
             return false;
         }
     }

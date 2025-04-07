@@ -40,7 +40,7 @@ class MediumResource extends Resource
                 Forms\Components\FileUpload::make('path')
                     ->label('File')
                     ->required()
-                    ->disk(fn (Get $get) => $get('disk_id'))
+                    ->disk(fn (Get $get) => Disk::find($get('disk_id'))->getKey())
                     ->columnSpanFull(),
                 Forms\Components\Textarea::make('meta')
                     ->required()

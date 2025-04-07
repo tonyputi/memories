@@ -18,6 +18,10 @@ class Disk extends Model
 
     public static function booted(): void
     {
+        static::retrieved(function (Disk $disk) {
+            Config::set("filesystems.disks.{$disk->getKey()}", $disk->storageConfig());
+        });
+
         static::forceDeleted(function (Disk $disk) {
             $disk->storage()->deleteDirectory('/');
         });
@@ -63,8 +67,6 @@ class Disk extends Model
      */
     public function storage(): Filesystem
     {
-        Config::set("filesystems.disks.{$this->getKey()}", $this->storageConfig());
-
         return Storage::disk($this->getKey());
     }
 }
