@@ -44,7 +44,8 @@
             "@php artisan package:discover --ansi",
             "@php artisan filament:upgrade",
             "@php artisan filament:optimize",
-            "@php artisan optimize"
+            "@php artisan optimize",
+            "@php artisan queue:restart"
         ],
         "post-update-cmd": [
             "@php artisan vendor:publish --tag=laravel-assets --ansi --force"

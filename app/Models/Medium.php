@@ -52,4 +52,11 @@ class Medium extends Model
             get: fn ($value) => $this->disk->storage()->url($this->path),
         );
     }
+
+    public function exif(): Attribute
+    {
+        return Attribute::make(
+            get: fn ($value) => exif_read_data($this->disk->storage()->path($this->path)),
+        );
+    }
 }

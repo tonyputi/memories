@@ -70,7 +70,12 @@ class RestoreMedia implements ShouldQueue
             }
 
             $jobs = $this->availableFiles($storage, $disk_id)
-                ->map(fn ($file) => new RestoreImage($file, $disk_id));
+                ->map(fn ($file) => match ($storage->mimeType($file)) {
+                    'image/jpeg' => new RestoreImage($file, $this->disk_id),
+                    'video/mp4' => new RestoreVideo($file, $this->disk_id),
+                    default => null,
+                })
+                ->filter();
 
             Bus::batch($jobs)
                 ->name('Restore Media Batch')

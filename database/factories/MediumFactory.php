@@ -28,10 +28,18 @@ class MediumFactory extends Factory
                 return $file->hashName();
             },
             'meta' => [
+                'taken_at' => $this->faker->dateTimeBetween('-1 year', 'now'),
+                'width' => $this->faker->numberBetween(100, 1000),
+                'height' => $this->faker->numberBetween(100, 1000),
+                'orientation' => $this->faker->numberBetween(1, 8),
+                'mimetype' => $this->faker->mimeType,
+                'camera' => [
+                    'make' => $this->faker->word,
+                    'model' => $this->faker->word,
+                ],
                 'gps' => [
-                    'altitude' => $this->faker->numberBetween(0, 1000),
-                    'latitude' => $this->faker->latitude,
-                    'longitude' => $this->faker->longitude,
+                    'lat' => $this->faker->latitude,
+                    'lng' => $this->faker->longitude,
                 ],
             ],
         ];
