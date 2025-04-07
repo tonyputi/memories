@@ -26,14 +26,10 @@ class Wall extends Page
     #[Computed]
     public function media(): Collection
     {
-        return collect(Medium::query()
+        return Medium::query()
             ->with('disk')
-            ->orderBy('created_at', 'desc')
+            ->orderBy(Medium::CREATED_AT, 'desc')
             ->paginate($this->perPage)
-            ->items()
-        )
-            ->groupBy(function ($medium) {
-                return $medium->created_at->format('Y-m-d');
-            });
+            ->groupBy(fn ($medium) => $medium->{Medium::CREATED_AT}->format('Y-m-d'));
     }
 }
