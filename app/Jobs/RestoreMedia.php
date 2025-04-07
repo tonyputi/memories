@@ -110,11 +110,27 @@ class RestoreMedia implements ShouldQueue
                         ->danger()
                         ->sendToDatabase($disk->user);
                     Log::error('Restore failed...');
-                })->finally(function (Batch $batch) use ($disk_id) {
+                })->finally(function (Batch $batch) use ($disk_id, $disk) {
                     $storage = Storage::disk('uploads');
                     if (! $storage->deleteDirectory($disk_id)) {
                         Log::error('Failed to delete temporary storage...');
                     }
+
+                    $body = __(':count of :total media restored successfully...', [
+                        'count' => $batch->successfulJobsCount,
+                        'total' => $batch->totalJobs,
+                    ]);
+                    
+                    Notification::make()
+                        ->title('Restore completed...')
+                        ->body($body)
+                        ->actions([
+                            Action::make('view')
+                                ->button()
+                                ->url(route('filament.admin.resources.media.index')),
+                        ])
+                        ->success()
+                        ->sendToDatabase($disk->user);
                 })
                 ->dispatch();
         } catch (Exception $e) {
