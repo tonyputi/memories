@@ -50,21 +50,21 @@ class RestoreMedia implements ShouldQueue
         try {
             if ($storage->mimeType($this->path) !== 'application/zip') {
                 Log::error("Invalid archive {$this->path}...");
-                $notification->title('Invalid archive...')->error()->sendToDatabase($disk->user);
+                $notification->title('Invalid archive...')->danger()->sendToDatabase($disk->user);
 
                 return;
             }
 
             if (! $this->extractZip($storage, $this->path)) {
                 Log::error("Failed to extract archive {$this->path}...");
-                $notification->title('Failed to extract archive...')->error()->sendToDatabase($disk->user);
+                $notification->title('Failed to extract archive...')->danger()->sendToDatabase($disk->user);
 
                 return;
             }
 
             if ($this->delete_after_restore && ! $storage->delete($this->path)) {
                 Log::error("Failed to delete {$this->path} archive...");
-                $notification->title('Failed to delete archive...')->error()->sendToDatabase($disk->user);
+                $notification->title('Failed to delete archive...')->danger()->sendToDatabase($disk->user);
 
                 return;
             }
@@ -107,7 +107,7 @@ class RestoreMedia implements ShouldQueue
                     Notification::make()
                         ->title('Restore failed...')
                         ->body($e->getMessage())
-                        ->error()
+                        ->danger()
                         ->sendToDatabase($disk->user);
                     Log::error('Restore failed...');
                 })->finally(function (Batch $batch) use ($disk_id) {
@@ -119,7 +119,7 @@ class RestoreMedia implements ShouldQueue
                 ->dispatch();
         } catch (Exception $e) {
             Log::error('Failed to process uploaded archive...', ['error' => $e->getMessage()]);
-            $notification->title('Failed to process uploaded archive...')->error()->sendToDatabase($disk->user);
+            $notification->title('Failed to process uploaded archive...')->danger()->sendToDatabase($disk->user);
             if (! $storage->deleteDirectory($disk_id)) {
                 Log::error('Failed to delete temporary storage...');
             }
