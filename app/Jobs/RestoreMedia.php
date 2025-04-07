@@ -20,6 +20,13 @@ class RestoreMedia implements ShouldQueue
     use Queueable;
 
     /**
+     * The number of seconds the job can run before timing out.
+     *
+     * @var int
+     */
+    public $timeout = 300;
+
+    /**
      * Create a new job instance.
      */
     public function __construct(public string $path, public string $disk_id, public bool $delete_after_restore = true)

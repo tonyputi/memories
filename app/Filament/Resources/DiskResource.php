@@ -119,7 +119,7 @@ class DiskResource extends Resource
                     ->action(function (array $data, Disk $disk) {
                         $tabData = data_get($data, 'activeTab', []);
                         $file = $tabData['computer']['path'] ?? $tabData['uploads']['path'];
-                        Jobs\RestoreMedia::dispatch($file, $disk->getKey());
+                        Jobs\RestoreMedia::dispatch($file, $disk->getKey(), false);
                     }),
 
                 Tables\Actions\EditAction::make(),
