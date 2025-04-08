@@ -28,7 +28,7 @@ class MediumFactory extends Factory
                 return $file->hashName();
             },
             'meta' => [
-                'taken_at' => $this->faker->dateTimeBetween('-1 year', 'now'),
+                'taken_at' => $this->faker->dateTimeBetween('-1 year', 'now')->format('Y-m-d H:i:s'),
                 'width' => $this->faker->numberBetween(100, 1000),
                 'height' => $this->faker->numberBetween(100, 1000),
                 'orientation' => $this->faker->numberBetween(1, 8),

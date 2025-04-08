@@ -35,6 +35,7 @@ class RestoreImage extends RestoreMedium
         $hash = md5_file($uploads->path($this->path));
         $path = Str::lower(sprintf('%s.%s', $hash, pathinfo($this->path, PATHINFO_EXTENSION)));
 
+        // TODO: Questo deve usare storage per copiar altrimenti non funziona con s3
         if (! copy($uploads->path($this->path), $disk->storage()->path($path))) {
             Log::error("Failed to copy file {$this->path} to {$path}...");
 
@@ -48,8 +49,8 @@ class RestoreImage extends RestoreMedium
             'path' => $path,
         ], [
             'meta' => $meta,
-            'created_at' => Carbon::createFromTimestamp(data_get($meta, 'taken_at') ?? $uploads->lastModified($this->path)),
-            'updated_at' => Carbon::createFromTimestamp(data_get($meta, 'taken_at') ?? $uploads->lastModified($this->path)),
+            'created_at' => Carbon::parse(data_get($meta, 'taken_at') ?? $uploads->lastModified($this->path)),
+            'updated_at' => Carbon::parse(data_get($meta, 'taken_at') ?? $uploads->lastModified($this->path)),
         ]);
     }
 

@@ -136,9 +136,9 @@ class RestoreMedia implements ShouldQueue
         } catch (Exception $e) {
             Log::error('Failed to process uploaded archive...', ['error' => $e->getMessage()]);
             $notification->title('Failed to process uploaded archive...')->danger()->sendToDatabase($disk->user);
-            if (! $storage->deleteDirectory($disk_id)) {
-                Log::error('Failed to delete temporary storage...');
-            }
+            // if (! $storage->deleteDirectory($disk_id)) {
+            //     Log::error('Failed to delete temporary storage...');
+            // }
         }
     }
 
