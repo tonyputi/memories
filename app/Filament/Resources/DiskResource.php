@@ -111,8 +111,8 @@ class DiskResource extends Resource
                                         Forms\Components\Select::make('path')
                                             ->label('Archive')
                                             ->options(function () {
+                                                // TODO: This should be converted into a kind of Collection file
                                                 $storage = Storage::disk('uploads');
-
                                                 return collect($storage->allFiles())
                                                     ->filter(fn ($file) => $storage->mimeType($file) === 'application/zip')
                                                     ->mapWithKeys(fn ($file) => [$file => $file]);

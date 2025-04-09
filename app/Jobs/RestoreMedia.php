@@ -56,7 +56,7 @@ class RestoreMedia implements ShouldQueue
                 return;
             }
 
-            if (! $this->extractZip($this->path, $storage)) {
+            if (! $this->extractZip($this->path, $storage->path($this->disk->getKey()))) {
                 Log::error("Failed to extract archive {$this->path}...");
                 $notification->title('Failed to extract archive...')->danger()->sendToDatabase($disk->user);
 
@@ -136,26 +136,26 @@ class RestoreMedia implements ShouldQueue
                 ->dispatch();
         } catch (Exception $e) {
             Log::error('Failed to process uploaded archive...', ['error' => $e->getMessage()]);
-            $notification->title('Failed to process uploaded archive...')->danger()->sendToDatabase($this->disk->user);
-            // if (! $storage->deleteDirectory($this->disk->getKey())) {
-            //     Log::error('Failed to delete temporary storage...');
-            // }
+            $notification->title('Failed to process uploaded archive...')->danger()->sendToDatabase($disk->user);
+            if (! $storage->deleteDirectory($disk->getKey())) {
+                Log::error('Failed to delete temporary storage...');
+            }
         }
     }
 
     // TODO: Move this into a helper method
-    protected function extractZip(string $path, Filesystem $storage): bool
+    protected function extractZip(string $archivePath, string $targetPath): bool
     {
         try {
             $zip = new ZipArchive;
-            if ($zip->open($path) !== true) {
+            if ($zip->open($archivePath) !== true) {
                 Log::error('Failed to open ZIP file');
 
                 return false;
             }
-
-            if (! $storage->exists($this->disk->getKey())) {
-                $storage->makeDirectory($this->disk->getKey());
+            
+            if (!file_exists($targetPath)) {
+                mkdir($targetPath, 0777, true);
             }
 
             // Extract files one by one
@@ -171,17 +171,17 @@ class RestoreMedia implements ShouldQueue
                 // Create necessary directories
                 $dirname = dirname($filename);
                 if ($dirname !== '.') {
-                    $fullDirPath = "{$this->disk->getKey()}/{$dirname}";
-                    if (! $storage->exists($fullDirPath)) {
-                        $storage->makeDirectory($fullDirPath);
+                    $fullDirPath = "{$targetPath}/{$dirname}";
+                    if (! file_exists($fullDirPath)) {
+                        mkdir($fullDirPath, 0777, true);
                     }
                 }
 
                 // Extract the file using getStream to handle memory better
                 $stream = $zip->getStream($filename);
                 if ($stream) {
-                    $targetPath = "{$this->disk->getKey()}/{$filename}";
-                    $targetHandle = fopen($storage->path($targetPath), 'wb');
+                    $fullFilePath = "{$targetPath}/{$filename}";
+                    $targetHandle = fopen($fullFilePath, 'wb');
 
                     if ($targetHandle) {
                         // Read and write in chunks of 1MB
