@@ -2,54 +2,11 @@
 
 namespace App\Jobs;
 
-use App\Models\Medium;
-use Carbon\Carbon;
-use Illuminate\Http\File;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
-
 class RestoreImage extends RestoreMedium
 {
-    /**
-     * Execute the job.
-     */
-    public function handle(): void
+    public function meta(): array
     {
-        if ($this->batch()->cancelled()) {
-            return;
-        }
-
-        if (! file_exists($this->path)) {
-            Log::error("File {$this->path} does not exist...");
-
-            return;
-        }
-
-        $meta = $this->getMeta($this->path);
-        $hash = md5_file($this->path);
-        $path = Str::lower(sprintf('%s.%s', $hash, pathinfo($this->path, PATHINFO_EXTENSION)));
-
-        if (! $this->disk->storage()->putFileAs('/', new File($this->path), $path)) {
-            Log::error("Failed to copy file {$this->path} to {$path}...");
-
-            return;
-        }
-
-        Medium::updateOrCreate([
-            'disk_id' => $this->disk->getKey(),
-            'name' => data_get($meta, 'filename', basename($this->path)),
-            'hash' => $hash,
-            'path' => $path,
-        ], [
-            'meta' => $meta,
-            'created_at' => Carbon::parse(data_get($meta, 'taken_at') ?? filemtime($this->path)),
-            'updated_at' => Carbon::parse(data_get($meta, 'taken_at') ?? filemtime($this->path)),
-        ]);
-    }
-
-    public function getMeta(string $path): array
-    {
-        $exif = $this->getMetaFromExif($path);
+        $exif = $this->getMetaFromExif($this->path);
         // $json = $this->getMetaFromJson($uploads->path($this->path));
 
         $meta = $exif;
