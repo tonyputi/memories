@@ -22,7 +22,8 @@
                             x-data="{ isPlaying: false }" @click="if (!isPlaying) $refs.video?.play()">
                             @if (str_starts_with($medium->type, 'video/'))
                                 <div class="w-full h-full bg-black">
-                                    <video x-ref="video" src="{{ $medium->disk->storage()->url($medium->path) }}"
+                                    <video x-ref="video"
+                                        src="{{ $medium->disk->storage()->temporaryUrl($medium->path, now()->addHour()) }}"
                                         poster="{{ $medium->disk->storage()->url($medium->path) }}?thumb=1"
                                         class="w-full h-full object-contain" controls preload="none"
                                         @play="isPlaying = true" @pause="isPlaying = false"></video>
@@ -35,7 +36,8 @@
                                     </div>
                                 </div>
                             @else
-                                <img src="{{ $medium->disk->storage()->url($medium->path) }}" alt="{{ $medium->name }}"
+                                <img src="{{ $medium->disk->storage()->temporaryUrl($medium->path, now()->addHour()) }}"
+                                    alt="{{ $medium->name }}"
                                     class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                                     loading="lazy" />
                             @endif
