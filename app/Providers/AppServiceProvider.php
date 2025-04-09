@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Models\Disk;
 use Filament\Actions;
 use Filament\Forms;
 use Filament\Infolists;
@@ -49,5 +50,8 @@ class AppServiceProvider extends ServiceProvider
         Infolists\Components\Entry::configureUsing(modifyUsing: function ($entry): void {
             $entry->translateLabel();
         });
+
+        // Serve local disks via the storage route temporary URLs
+        Disk::query()->local()->each(fn (Disk $disk) => $disk->registerStorage());
     }
 }

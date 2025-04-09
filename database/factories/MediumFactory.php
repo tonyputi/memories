@@ -23,7 +23,8 @@ class MediumFactory extends Factory
             'name' => "{$this->faker->word}.jpg",
             'path' => function (array $attributes) {
                 $file = UploadedFile::fake()->image($attributes['name']);
-                Disk::find($attributes['disk_id'])->storage()->putFile('/', $file);
+                $disk = Disk::find($attributes['disk_id']);
+                $disk->storage()->putFile('/', $file);
 
                 return $file->hashName();
             },

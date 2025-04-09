@@ -48,7 +48,7 @@ class Medium extends Model
     public function url(): Attribute
     {
         return Attribute::make(
-            get: fn ($value) => $this->disk->storage()->url($this->path),
+            get: fn ($value) => $this->disk->storage()->temporaryUrl($this->path, now()->addHour()),
         );
     }
 

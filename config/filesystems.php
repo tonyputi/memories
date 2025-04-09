@@ -36,6 +36,7 @@ return [
             'serve' => true,
             'throw' => false,
             'report' => false,
+            'url' => env('APP_URL').'/storage/private',
         ],
 
         'public' => [
@@ -63,11 +64,10 @@ return [
         'uploads' => [
             'driver' => 'local',
             'root' => storage_path('framework/uploads'),
-            'serve' => true,
+            'serve' => false,
             'throw' => false,
             'report' => false,
         ],
-
     ],
 
     /*
