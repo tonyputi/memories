@@ -46,6 +46,12 @@ class RestoreVideo extends RestoreMedium
 
     public function getMetaFromFFProbe(string $path): array
     {
+        $result = Process::command('which ffprobe')->run();
+        if (! $result->successful()) {
+            Log::warning('ffprobe is not installed, skipping video metadata extraction');
+            return [];
+        }
+
         $command = sprintf('ffprobe -v quiet -print_format json -show_format -show_streams "%s"', $path);
         $result = Process::command($command)->run();
 

@@ -52,6 +52,8 @@ class AppServiceProvider extends ServiceProvider
         });
 
         // Serve local disks via the storage route temporary URLs
-        Disk::query()->local()->each(fn (Disk $disk) => $disk->registerStorage());
+        rescue(function () {
+            Disk::query()->local()->each(fn (Disk $disk) => $disk->registerStorage());
+        });
     }
 }
