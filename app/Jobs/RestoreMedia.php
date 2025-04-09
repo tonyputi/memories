@@ -70,8 +70,8 @@ class RestoreMedia implements ShouldQueue
 
             $jobs = $this->availableFiles($storage, $disk->getKey())
                 ->map(fn ($file) => match ($storage->mimeType($file)) {
-                    'image/jpeg' => new RestoreImage($file, $this->disk->getKey()),
-                    'video/mp4' => new RestoreVideo($file, $this->disk->getKey()),
+                    'image/jpeg' => new RestoreImage($file, $disk),
+                    'video/mp4' => new RestoreVideo($file, $disk),
                     default => null,
                 })
                 ->filter();
@@ -109,7 +109,8 @@ class RestoreMedia implements ShouldQueue
                         ->danger()
                         ->sendToDatabase($disk->user);
                     Log::error('Restore failed...');
-                })->finally(function (Batch $batch) use ($disk) {
+                })
+                ->finally(function (Batch $batch) use ($disk) {
                     $storage = Storage::disk('uploads');
                     if (! $storage->deleteDirectory($disk->getKey())) {
                         Log::error('Failed to delete temporary storage...');
@@ -134,13 +135,14 @@ class RestoreMedia implements ShouldQueue
                 ->dispatch();
         } catch (Exception $e) {
             Log::error('Failed to process uploaded archive...', ['error' => $e->getMessage()]);
-            $notification->title('Failed to process uploaded archive...')->danger()->sendToDatabase($disk->user);
-            // if (! $storage->deleteDirectory($disk->getKey())) {
+            $notification->title('Failed to process uploaded archive...')->danger()->sendToDatabase($this->disk->user);
+            // if (! $storage->deleteDirectory($this->disk->getKey())) {
             //     Log::error('Failed to delete temporary storage...');
             // }
         }
     }
 
+    // TODO: Move this into a helper method
     protected function extractZip(Filesystem $storage, string $path): bool
     {
         try {

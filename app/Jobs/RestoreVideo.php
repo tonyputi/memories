@@ -22,8 +22,6 @@ class RestoreVideo extends RestoreMedium
             return;
         }
 
-        $disk = Disk::findOrFail($this->disk_id);
-
         $uploads = Storage::disk('uploads');
 
         if (! $uploads->exists($this->path)) {
@@ -36,14 +34,14 @@ class RestoreVideo extends RestoreMedium
         $hash = md5_file($uploads->path($this->path));
         $path = Str::lower(sprintf('%s.%s', $hash, pathinfo($this->path, PATHINFO_EXTENSION)));
 
-        if (! copy($uploads->path($this->path), $disk->storage()->path($path))) {
+        if (! copy($uploads->path($this->path), $this->disk->storage()->path($path))) {
             Log::error("Failed to copy file {$this->path} to {$path}...");
 
             return;
         }
 
         Medium::updateOrCreate([
-            'disk_id' => $disk->getKey(),
+            'disk_id' => $this->disk->getKey(),
             'name' => data_get($meta, 'filename', basename($this->path)),
             'hash' => $hash,
             'path' => $path,
@@ -71,7 +69,7 @@ class RestoreVideo extends RestoreMedium
                         }
                     }
                 }
-    
+
                 if (isset($stream['tags']['rotate'])) {
                     $meta['orientation'] = intval($stream['tags']['rotate']);
                 }
@@ -98,6 +96,7 @@ class RestoreVideo extends RestoreMedium
 
         if (! $result->successful()) {
             Log::error("Failed to get metadata for {$path} using ffprobe...");
+
             return [];
         }
 

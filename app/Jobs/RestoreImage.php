@@ -21,8 +21,6 @@ class RestoreImage extends RestoreMedium
             return;
         }
 
-        $disk = Disk::findOrFail($this->disk_id);
-
         $uploads = Storage::disk('uploads');
 
         if (! $uploads->exists($this->path)) {
@@ -36,14 +34,14 @@ class RestoreImage extends RestoreMedium
         $path = Str::lower(sprintf('%s.%s', $hash, pathinfo($this->path, PATHINFO_EXTENSION)));
 
         // TODO: Questo deve usare storage per copiar altrimenti non funziona con s3
-        if (! copy($uploads->path($this->path), $disk->storage()->path($path))) {
+        if (! copy($uploads->path($this->path), $this->disk->storage()->path($path))) {
             Log::error("Failed to copy file {$this->path} to {$path}...");
 
             return;
         }
 
         Medium::updateOrCreate([
-            'disk_id' => $disk->getKey(),
+            'disk_id' => $this->disk->getKey(),
             'name' => data_get($meta, 'filename', basename($this->path)),
             'hash' => $hash,
             'path' => $path,

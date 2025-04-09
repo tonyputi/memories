@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Models\Disk;
 use Illuminate\Bus\Batchable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -22,7 +23,7 @@ abstract class RestoreMedium implements ShouldQueue
      */
     public function __construct(
         public string $path,
-        public string $disk_id,
+        public Disk $disk,
     ) {
         //
     }
@@ -31,4 +32,9 @@ abstract class RestoreMedium implements ShouldQueue
      * Execute the job.
      */
     abstract public function handle(): void;
+
+    /**
+     * Get the meta data for the medium.
+     */
+    // abstract public function meta(): array;
 }
