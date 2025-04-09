@@ -54,7 +54,7 @@ class MediaRestore extends Command implements PromptsForMissingInput
     public function handle()
     {
         $file = $this->argument('file');
-        $disk = $this->argument('disk');
+        $disk = Disk::find($this->argument('disk'));
         $delete = $this->option('delete') ?? false;
 
         RestoreMedia::dispatch($file, $disk, $delete);

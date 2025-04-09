@@ -32,7 +32,7 @@ class RestoreMedia implements ShouldQueue
     /**
      * Create a new job instance.
      */
-    public function __construct(public string $path, public string $disk_id, public bool $delete_after_restore = true)
+    public function __construct(public string $path, public Disk $disk, public bool $delete_after_restore = true)
     {
         //
     }
@@ -44,8 +44,7 @@ class RestoreMedia implements ShouldQueue
     {
         $notification = Notification::make();
         $storage = Storage::disk('uploads');
-        $disk_id = $this->disk_id;
-        $disk = Disk::find($disk_id);
+        $disk = $this->disk;
 
         try {
             if ($storage->mimeType($this->path) !== 'application/zip') {
@@ -69,10 +68,10 @@ class RestoreMedia implements ShouldQueue
                 return;
             }
 
-            $jobs = $this->availableFiles($storage, $disk_id)
+            $jobs = $this->availableFiles($storage, $disk->getKey())
                 ->map(fn ($file) => match ($storage->mimeType($file)) {
-                    'image/jpeg' => new RestoreImage($file, $this->disk_id),
-                    'video/mp4' => new RestoreVideo($file, $this->disk_id),
+                    'image/jpeg' => new RestoreImage($file, $this->disk->getKey()),
+                    'video/mp4' => new RestoreVideo($file, $this->disk->getKey()),
                     default => null,
                 })
                 ->filter();
@@ -110,9 +109,9 @@ class RestoreMedia implements ShouldQueue
                         ->danger()
                         ->sendToDatabase($disk->user);
                     Log::error('Restore failed...');
-                })->finally(function (Batch $batch) use ($disk_id, $disk) {
+                })->finally(function (Batch $batch) use ($disk) {
                     $storage = Storage::disk('uploads');
-                    if (! $storage->deleteDirectory($disk_id)) {
+                    if (! $storage->deleteDirectory($disk->getKey())) {
                         Log::error('Failed to delete temporary storage...');
                     }
 
@@ -120,7 +119,7 @@ class RestoreMedia implements ShouldQueue
                         'count' => $batch->successfulJobsCount,
                         'total' => $batch->totalJobs,
                     ]);
-                    
+
                     Notification::make()
                         ->title('Restore completed...')
                         ->body($body)
@@ -136,7 +135,7 @@ class RestoreMedia implements ShouldQueue
         } catch (Exception $e) {
             Log::error('Failed to process uploaded archive...', ['error' => $e->getMessage()]);
             $notification->title('Failed to process uploaded archive...')->danger()->sendToDatabase($disk->user);
-            // if (! $storage->deleteDirectory($disk_id)) {
+            // if (! $storage->deleteDirectory($disk->getKey())) {
             //     Log::error('Failed to delete temporary storage...');
             // }
         }
@@ -152,8 +151,8 @@ class RestoreMedia implements ShouldQueue
                 return false;
             }
 
-            if (! $storage->exists($this->disk_id)) {
-                $storage->makeDirectory($this->disk_id);
+            if (! $storage->exists($this->disk->getKey())) {
+                $storage->makeDirectory($this->disk->getKey());
             }
 
             // Extract files one by one
@@ -169,7 +168,7 @@ class RestoreMedia implements ShouldQueue
                 // Create necessary directories
                 $dirname = dirname($filename);
                 if ($dirname !== '.') {
-                    $fullDirPath = "{$this->disk_id}/{$dirname}";
+                    $fullDirPath = "{$this->disk->getKey()}/{$dirname}";
                     if (! $storage->exists($fullDirPath)) {
                         $storage->makeDirectory($fullDirPath);
                     }
@@ -178,7 +177,7 @@ class RestoreMedia implements ShouldQueue
                 // Extract the file using getStream to handle memory better
                 $stream = $zip->getStream($filename);
                 if ($stream) {
-                    $targetPath = "{$this->disk_id}/{$filename}";
+                    $targetPath = "{$this->disk->getKey()}/{$filename}";
                     $targetHandle = fopen($storage->path($targetPath), 'wb');
 
                     if ($targetHandle) {
