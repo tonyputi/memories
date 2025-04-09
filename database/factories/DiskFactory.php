@@ -3,33 +3,15 @@
 namespace Database\Factories;
 
 use App\Enums\DiskDriver;
-use App\Models\Disk;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Str;
 
 /**
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Disk>
  */
 class DiskFactory extends Factory
 {
-    /**
-     * Configure the model factory.
-     */
-    // public function configure(): static
-    // {
-    //     return $this->afterCreating(function (Disk $disk) {
-    //         $disk->config = [
-    //             'root' => config('filesystems.disks.public.root'),
-    //             'url' => config('filesystems.disks.public.url'),
-    //             'visibility' => 'public',
-    //             'throw' => false,
-    //             'report' => false,
-    //         ];
-
-    //         $disk->save();
-    //     });
-    // }
-
     /**
      * Define the model's default state.
      *
@@ -39,15 +21,33 @@ class DiskFactory extends Factory
     {
         return [
             'user_id' => User::factory(),
-            'name' => $this->faker->word,
-            'driver' => DiskDriver::Local->value,
-            'config' => [
-                'root' => config('filesystems.disks.public.root'),
-                'url' => config('filesystems.disks.public.url'),
-                'visibility' => 'public',
-                'throw' => false,
-                'report' => false,
-            ],
+            // 'driver' => $this->faker->randomElement(array_map(fn($e) => $e->value, DiskDriver::cases())),
+            'driver' => $this->faker->randomElement(DiskDriver::cases()),
+            'name' => fn (array $attributes) => Str::title("{$attributes['driver']->value} disk: {$this->faker->word}"),
+            'config' => function (array $attributes) {
+                $driver = $attributes['driver']->value;
+                $config = config("filesystems.disks.{$driver}");
+                unset($config['driver']);
+
+                return $config;
+            },
         ];
+    }
+
+    public function local(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'driver' => DiskDriver::Local,
+        ]);
+    }
+
+    /**
+     * Indicate that the model's email address should be unverified.
+     */
+    public function s3(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'driver' => DiskDriver::S3,
+        ]);
     }
 }

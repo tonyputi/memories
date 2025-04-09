@@ -46,15 +46,15 @@ class Disk extends Model
     public function storageConfig(): array
     {
         $config = $this->config;
+        $config['driver'] = $this->driver->value;
 
         if ($this->driver === DiskDriver::Local) {
-            $config['driver'] = $this->driver->value;
             $config['root'] = implode(DIRECTORY_SEPARATOR, [
-                rtrim(data_get($config, 'root', config('filesystems.disks.local.root')), DIRECTORY_SEPARATOR),
+                rtrim(data_get($config, 'root', config('filesystems.disks.public.root')), DIRECTORY_SEPARATOR),
                 $this->getKey(),
             ]);
             $config['url'] = implode('/', [
-                rtrim(data_get($config, 'url', config('filesystems.disks.local.url')), '/'),
+                rtrim(data_get($config, 'url', config('filesystems.disks.public.url')), '/'),
                 $this->getKey(),
             ]);
         }

@@ -19,13 +19,22 @@ class DatabaseSeeder extends Seeder
             'email' => 'filippo@sallemi.it',
         ]);
 
-        $disk = Disk::factory()->create([
-            'user_id' => $user->getKey(),
-            'name' => 'Disk 1',
-        ]);
+        $disk['local'] = Disk::factory()
+            ->for($user)
+            ->local()
+            ->create();
 
-        Medium::factory(10)->create([
-            'disk_id' => $disk->getKey(),
-        ]);
+        $disk['s3'] = Disk::factory()
+            ->for($user)
+            ->s3()
+            ->create();
+
+        // Medium::factory(10)
+        //     ->for($disk['local'])
+        //     ->create();
+
+        // Medium::factory(10)
+        //     ->for($disk['s3'])
+        //     ->create();
     }
 }

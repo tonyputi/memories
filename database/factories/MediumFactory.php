@@ -27,21 +27,26 @@ class MediumFactory extends Factory
 
                 return $file->hashName();
             },
-            'meta' => [
-                'taken_at' => $this->faker->dateTimeBetween('-1 year', 'now')->format('Y-m-d H:i:s'),
-                'width' => $this->faker->numberBetween(100, 1000),
-                'height' => $this->faker->numberBetween(100, 1000),
-                'orientation' => $this->faker->numberBetween(1, 8),
-                'mimetype' => $this->faker->mimeType,
-                'camera' => [
-                    'make' => $this->faker->word,
-                    'model' => $this->faker->word,
-                ],
-                'gps' => [
-                    'lat' => $this->faker->latitude,
-                    'lng' => $this->faker->longitude,
-                ],
-            ],
+            'hash' => fn (array $attributes) => pathinfo($attributes['name'], PATHINFO_FILENAME),
+            'meta' => function (array $attributes) {
+                $storage = Disk::find($attributes['disk_id'])->storage();
+
+                return [
+                    'taken_at' => $this->faker->dateTimeBetween('-1 year', 'now')->format('Y-m-d H:i:s'),
+                    'width' => $this->faker->numberBetween(100, 1000),
+                    'height' => $this->faker->numberBetween(100, 1000),
+                    'orientation' => $this->faker->numberBetween(0, 1),
+                    'mimetype' => $storage->mimeType($attributes['path']),
+                    'camera' => [
+                        'make' => $this->faker->word,
+                        'model' => $this->faker->word,
+                    ],
+                    'gps' => [
+                        'lat' => $this->faker->latitude,
+                        'lng' => $this->faker->longitude,
+                    ],
+                ];
+            },
         ];
     }
 }

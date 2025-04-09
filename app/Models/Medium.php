@@ -19,7 +19,6 @@ class Medium extends Model
             $storage = $medium->disk->storage();
             if ($storage->exists($medium->path)) {
                 $medium->type = $storage->mimeType($medium->path);
-                $medium->hash = md5_file($storage->path($medium->path));
                 $medium->size = $storage->size($medium->path);
             }
         });
