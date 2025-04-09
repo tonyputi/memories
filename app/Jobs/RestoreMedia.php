@@ -70,12 +70,13 @@ class RestoreMedia implements ShouldQueue
             }
 
             $jobs = $this->availableFiles($storage, $disk->getKey())
-                ->map(fn ($file) => match ($storage->mimeType($file)) {
-                    'image/jpeg' => new RestoreImage($file, $disk),
-                    'video/mp4' => new RestoreVideo($file, $disk),
-                    default => null,
-                })
-                ->filter();
+                ->map(function ($file) use ($disk) {
+                    return match (mime_content_type($file)) {
+                        'image/jpeg' => new RestoreImage($file, $disk),
+                        'video/mp4' => new RestoreVideo($file, $disk),
+                        default => null,
+                    };
+                });
 
             Bus::batch($jobs)
                 ->name('Restore Media Batch')
@@ -144,11 +145,11 @@ class RestoreMedia implements ShouldQueue
 
     protected function availableFiles(Filesystem $storage, string $path): Collection
     {
-        // TODO: files non deve contenere file inderiderati come .gitignore o .DS_Store etc
-        [$json, $files] = collect($storage->allFiles($path))
-            ->reject(fn ($file) => Str::startsWith($file, '.'))
-            ->partition(fn ($file) => Str::endsWith($file, '.json'));
-
-        return $files;
+        return collect($storage->allFiles($path))
+            ->reject(function ($file) {
+                return Str::startsWith($file, '.') || Str::endsWith($file, '.json');
+            })
+            ->map(fn ($file) => $storage->path($file))
+            ->filter();
     }
 }

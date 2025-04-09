@@ -4,10 +4,8 @@ namespace App\Jobs;
 
 use App\Models\Medium;
 use Carbon\Carbon;
-use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class RestoreVideo extends RestoreMedium
@@ -21,19 +19,17 @@ class RestoreVideo extends RestoreMedium
             return;
         }
 
-        $uploads = Storage::disk('uploads');
-
-        if (! $uploads->exists($this->path)) {
+        if (! file_exists($this->path)) {
             Log::error("File {$this->path} does not exist...");
 
             return;
         }
 
-        $meta = $this->getMeta($uploads);
-        $hash = md5_file($uploads->path($this->path));
+        $meta = $this->getMeta($this->path);
+        $hash = md5_file($this->path);
         $path = Str::lower(sprintf('%s.%s', $hash, pathinfo($this->path, PATHINFO_EXTENSION)));
 
-        if (! copy($uploads->path($this->path), $this->disk->storage()->path($path))) {
+        if (! copy($this->path, $this->disk->storage()->path($path))) {
             Log::error("Failed to copy file {$this->path} to {$path}...");
 
             return;
@@ -46,14 +42,14 @@ class RestoreVideo extends RestoreMedium
             'path' => $path,
         ], [
             'meta' => $meta,
-            'created_at' => Carbon::createFromTimestamp(data_get($meta, 'taken_at') ?? $uploads->lastModified($this->path)),
-            'updated_at' => Carbon::createFromTimestamp(data_get($meta, 'taken_at') ?? $uploads->lastModified($this->path)),
+            'created_at' => Carbon::createFromTimestamp(data_get($meta, 'taken_at') ?? filemtime($this->path)),
+            'updated_at' => Carbon::createFromTimestamp(data_get($meta, 'taken_at') ?? filemtime($this->path)),
         ]);
     }
 
-    public function getMeta(Filesystem $uploads): array
+    public function getMeta(string $path): array
     {
-        $ffprobe = $this->getMetaFromFFProbe($uploads->path($this->path));
+        $ffprobe = $this->getMetaFromFFProbe($path);
 
         $meta = [];
         foreach ($ffprobe['streams'] as $stream) {

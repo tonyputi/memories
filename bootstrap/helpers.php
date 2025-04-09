@@ -31,8 +31,8 @@ if (! function_exists('extractZip')) {
 
                 return false;
             }
-            
-            if (!file_exists($targetPath)) {
+
+            if (! file_exists($targetPath)) {
                 mkdir($targetPath, 0777, true);
             }
 
