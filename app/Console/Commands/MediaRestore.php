@@ -57,7 +57,8 @@ class MediaRestore extends Command implements PromptsForMissingInput
         $disk = $this->argument('disk');
         $delete = $this->option('delete') ?? false;
 
-        RestoreMedia::dispatchSync($file, $disk, $delete);
+        RestoreMedia::dispatch($file, $disk, $delete);
+        $this->info("Restore job dispatched. You'll be notifieed when the process is done.");
     }
 
     /**

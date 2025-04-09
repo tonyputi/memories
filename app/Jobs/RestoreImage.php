@@ -56,11 +56,6 @@ class RestoreImage extends RestoreMedium
 
     public function getMeta(Filesystem $uploads): array
     {
-        // TODO: This is a temporary fix. Later will be dispatched another job for each mime type.
-        if ($uploads->mimeType($this->path) !== 'image/jpeg') {
-            return [];
-        }
-
         $exif = $this->getMetaFromExif($uploads->path($this->path));
         // $json = $this->getMetaFromJson($uploads->path($this->path));
 
