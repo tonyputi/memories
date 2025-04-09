@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Models\Medium;
 use Carbon\Carbon;
+use Illuminate\Http\File;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
@@ -28,8 +29,7 @@ class RestoreImage extends RestoreMedium
         $hash = md5_file($this->path);
         $path = Str::lower(sprintf('%s.%s', $hash, pathinfo($this->path, PATHINFO_EXTENSION)));
 
-        // TODO: Questo deve usare storage per copiar altrimenti non funziona con s3
-        if (! copy($this->path, $this->disk->storage()->path($path))) {
+        if (! $this->disk->storage()->putFileAs('/', new File($this->path), $path)) {
             Log::error("Failed to copy file {$this->path} to {$path}...");
 
             return;
