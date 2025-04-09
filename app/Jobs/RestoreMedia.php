@@ -46,22 +46,24 @@ class RestoreMedia implements ShouldQueue
         $storage = Storage::disk('uploads');
         $disk = $this->disk;
 
+        $contentType = mime_content_type($this->path);
+
         try {
-            if ($storage->mimeType($this->path) !== 'application/zip') {
+            if ($contentType !== 'application/zip') {
                 Log::error("Invalid archive {$this->path}...");
                 $notification->title('Invalid archive...')->danger()->sendToDatabase($disk->user);
 
                 return;
             }
 
-            if (! $this->extractZip($storage, $this->path)) {
+            if (! $this->extractZip($this->path, $storage)) {
                 Log::error("Failed to extract archive {$this->path}...");
                 $notification->title('Failed to extract archive...')->danger()->sendToDatabase($disk->user);
 
                 return;
             }
 
-            if ($this->delete_after_restore && ! $storage->delete($this->path)) {
+            if ($this->delete_after_restore && ! unlink($this->path)) {
                 Log::error("Failed to delete {$this->path} archive...");
                 $notification->title('Failed to delete archive...')->danger()->sendToDatabase($disk->user);
 
@@ -88,13 +90,12 @@ class RestoreMedia implements ShouldQueue
                 })->progress(function (Batch $batch) {
                     Log::info("Batch {$batch->progress()} progress...");
                 })->then(function (Batch $batch) use ($disk) {
-                    $body = __(':count of :total media restored successfully...', [
-                        'count' => $batch->successfulJobsCount,
-                        'total' => $batch->totalJobs,
-                    ]);
                     Notification::make()
                         ->title('Restore completed...')
-                        ->body($body)
+                        ->body(__(':count of :total media restored successfully...', [
+                            'count' => $batch->successfulJobsCount,
+                            'total' => $batch->totalJobs,
+                        ]))
                         ->actions([
                             Action::make('view')
                                 ->button()
@@ -143,11 +144,11 @@ class RestoreMedia implements ShouldQueue
     }
 
     // TODO: Move this into a helper method
-    protected function extractZip(Filesystem $storage, string $path): bool
+    protected function extractZip(string $path, Filesystem $storage): bool
     {
         try {
             $zip = new ZipArchive;
-            if ($zip->open($storage->path($path)) !== true) {
+            if ($zip->open($path) !== true) {
                 Log::error('Failed to open ZIP file');
 
                 return false;
@@ -215,10 +216,10 @@ class RestoreMedia implements ShouldQueue
         }
     }
 
-    protected function availableFiles(Filesystem $storage, string $disk_id): Collection
+    protected function availableFiles(Filesystem $storage, string $path): Collection
     {
         // TODO: files non deve contenere file inderiderati come .gitignore o .DS_Store etc
-        [$json, $files] = collect($storage->allFiles($disk_id))
+        [$json, $files] = collect($storage->allFiles($path))
             ->reject(fn ($file) => Str::startsWith($file, '.'))
             ->partition(fn ($file) => Str::endsWith($file, '.json'));
 

@@ -2,7 +2,6 @@
 
 namespace App\Jobs;
 
-use App\Models\Disk;
 use App\Models\Medium;
 use Carbon\Carbon;
 use Illuminate\Contracts\Filesystem\Filesystem;

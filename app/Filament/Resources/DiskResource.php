@@ -93,7 +93,7 @@ class DiskResource extends Resource
                     ->icon('heroicon-o-arrow-up-tray')
                     ->form([
                         Forms\Components\Tabs::make('source')
-                            ->statePath('activeTab')
+                            ->statePath('tabs')
                             ->tabs([
                                 Forms\Components\Tabs\Tab::make('Computer')
                                     ->statePath('computer')
@@ -123,9 +123,13 @@ class DiskResource extends Resource
                             ]),
                     ])
                     ->action(function (array $data, Disk $disk) {
-                        $tabData = data_get($data, 'activeTab', []);
-                        $file = $tabData['computer']['path'] ?? $tabData['uploads']['path'];
-                        Jobs\RestoreMedia::dispatch($file, $disk, false);
+                        $values = [];
+                        foreach (data_get($data, 'tabs', []) as $tab) {
+                            $values = array_merge($values, array_filter($tab));
+                        }
+
+                        $path = Storage::disk('uploads')->path(data_get($values, 'path'));
+                        Jobs\RestoreMedia::dispatch($path, $disk, false);
                     }),
 
                 Tables\Actions\EditAction::make(),
