@@ -74,6 +74,12 @@ class MediumResource extends Resource
                 Tables\Columns\TextColumn::make('size')
                     ->formatStateUsing(fn ($state) => Number::fileSize($state, 2))
                     ->sortable(),
+                Tables\Columns\TextColumn::make('latitude')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('longitude')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
