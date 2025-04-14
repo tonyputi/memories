@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Filesystem\ServeFile;
 use Illuminate\Http\Request;
@@ -38,6 +39,14 @@ class Disk extends Model
             'config' => 'json',
             'driver' => DiskDriver::class,
         ];
+    }
+
+    /**
+     * Get the media for the disk.
+     */
+    public function media(): HasMany
+    {
+        return $this->hasMany(Medium::class);
     }
 
     /**

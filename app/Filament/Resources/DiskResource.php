@@ -115,6 +115,12 @@ class DiskResource extends Resource
                 Tables\Columns\TextColumn::make('driver')
                     ->badge()
                     ->searchable(),
+                Tables\Columns\ImageColumn::make('media.url')
+                    ->circular()
+                    ->stacked()
+                    ->limit(4)
+                    ->limitedRemainingText()
+                    ->state(fn ($record) => $record->media->map(fn ($media) => $media->url)),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
@@ -141,6 +147,7 @@ class DiskResource extends Resource
                             ->statePath('tabs')
                             ->tabs([
                                 Forms\Components\Tabs\Tab::make('Computer')
+                                    ->icon('heroicon-o-computer-desktop')
                                     ->statePath('computer')
                                     ->schema([
                                         Forms\Components\FileUpload::make('path')
@@ -151,14 +158,13 @@ class DiskResource extends Resource
                                             ->required(fn (Get $get): bool => $get('activeTab') === 'computer'),
                                     ]),
                                 Forms\Components\Tabs\Tab::make('Uploads')
+                                    ->icon('heroicon-o-arrow-up-tray')
                                     ->statePath('uploads')
                                     ->schema([
                                         Forms\Components\Select::make('path')
                                             ->label('Archive')
                                             ->options(function () {
-                                                // TODO: This should be converted into a kind of Collection file
                                                 $storage = Storage::disk('uploads');
-
                                                 return collect($storage->allFiles())
                                                     ->filter(fn ($file) => $storage->mimeType($file) === 'application/zip')
                                                     ->mapWithKeys(fn ($file) => [$file => $file]);
