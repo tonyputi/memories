@@ -10,6 +10,7 @@ use App\Models\Disk;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Forms\Get;
+use Filament\Forms\Set;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -30,33 +31,75 @@ class DiskResource extends Resource
             ->schema([
                 Forms\Components\Select::make('user_id')
                     ->relationship('user', 'name')
-                    ->required(),
+                    ->required()
+                    ->helperText('The user that owns the disk.')
+                    ->columnSpanFull(),
                 Forms\Components\TextInput::make('name')
-                    ->required(),
+                    ->required()
+                    ->helperText('The name of the disk.'),
                 Forms\Components\Select::make('driver')
                     ->options(DiskDriver::class)
+                    ->disabled(fn ($record) => $record !== null)
                     ->searchable()
                     ->required()
-                    ->live(),
+                    ->live()
+                    ->afterStateUpdated(function (Get $get, Set $set, $state) {
+                        if ($get('driver') === DiskDriver::Local->value) {
+                            $set('config.url', config('filesystems.disks.local.url'));
+                            $set('config.root', config('filesystems.disks.local.root'));
+                            $set('config.visibility', DiskVisibility::Private->value);
+                        } elseif ($get('driver') === DiskDriver::S3->value) {
+                            $set('config.url', config('filesystems.disks.s3.url'));
+                            $set('config.root', config('filesystems.disks.s3.root'));
+                            $set('config.visibility', DiskVisibility::Public->value);
+                            $set('config.key', config('filesystems.disks.s3.key'));
+                            $set('config.secret', config('filesystems.disks.s3.secret'));
+                            $set('config.region', config('filesystems.disks.s3.region'));
+                            $set('config.bucket', config('filesystems.disks.s3.bucket'));
+                            $set('config.endpoint', config('filesystems.disks.s3.endpoint'));
+                            $set('config.use_path_style_endpoint', (int) config('filesystems.disks.s3.use_path_style_endpoint'));
+                        }
+                    })
+                    ->helperText('The driver of the disk.'),
                 Forms\Components\TextInput::make('config.url')
-                    ->required(),
+                    ->hidden(fn (Get $get) => empty($get('driver')))
+                    ->required()
+                    ->helperText('The URL of the disk.'),
                 Forms\Components\TextInput::make('config.root')
-                    ->visible(fn (Get $get) => $get('driver') === DiskDriver::Local->value)
-                    ->required(),
+                    ->hidden(fn (Get $get) => empty($get('driver')))
+                    ->required(fn (Get $get) => $get('driver') === DiskDriver::Local->value)
+                    ->helperText('The root of the disk.'),
                 Forms\Components\Select::make('config.visibility')
-                    ->visible(fn (Get $get) => $get('driver') === DiskDriver::Local->value)
+                    ->hidden(fn (Get $get) => empty($get('driver')))
                     ->options(DiskVisibility::class)
                     ->searchable()
-                    ->required(),
+                    ->required()
+                    ->helperText('The visibility of the disk.'),
                 Forms\Components\TextInput::make('config.key')
                     ->visible(fn (Get $get) => $get('driver') === DiskDriver::S3->value)
-                    ->required(),
+                    ->required()
+                    ->helperText('The key of the disk.'),
                 Forms\Components\TextInput::make('config.secret')
                     ->visible(fn (Get $get) => $get('driver') === DiskDriver::S3->value)
-                    ->required(),
+                    ->required()
+                    ->helperText('The secret of the disk.'),
                 Forms\Components\TextInput::make('config.region')
                     ->visible(fn (Get $get) => $get('driver') === DiskDriver::S3->value)
-                    ->required(),
+                    ->required()
+                    ->helperText('The region of the disk.'),
+                Forms\Components\TextInput::make('config.bucket')
+                    ->visible(fn (Get $get) => $get('driver') === DiskDriver::S3->value)
+                    ->required()
+                    ->helperText('The bucket of the disk.'),
+                Forms\Components\TextInput::make('config.endpoint')
+                    ->visible(fn (Get $get) => $get('driver') === DiskDriver::S3->value)
+                    ->required()
+                    ->helperText('The endpoint of the disk.'),
+                Forms\Components\Select::make('config.use_path_style_endpoint')
+                    ->visible(fn (Get $get) => $get('driver') === DiskDriver::S3->value)
+                    ->options(['No', 'Yes'])
+                    ->required()
+                    ->helperText('The use path style endpoint of the disk.'),
             ]);
     }
 
@@ -87,6 +130,8 @@ class DiskResource extends Resource
             ])
             ->filters([
                 Tables\Filters\TrashedFilter::make(),
+                Tables\Filters\SelectFilter::make('driver')
+                    ->options(DiskDriver::class),
             ])
             ->actions([
                 Tables\Actions\Action::make('import')
